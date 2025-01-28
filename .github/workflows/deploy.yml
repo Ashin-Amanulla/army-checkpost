@@ -11,20 +11,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # Build and deploy Frontend
+      # Build Frontend
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
           node-version: "20"
 
-      - name: Install Frontend Dependencies
+      - name: Install & Build Frontend
         run: |
           cd frontend
-          npm install
-
-      - name: Build Frontend
-        run: |
-          cd frontend
+          npm ci
           npm run build
 
       # Build Backend
@@ -49,32 +45,77 @@ jobs:
 
       - name: Deploy to Lightsail
         run: |
-          # Create deployment directory
-          mkdir -p deploy
+          # Create deployment directory structure
+          mkdir -p deploy/frontend deploy/backend
 
-          # Package applications
-          cd frontend/dist && zip -r ../../deploy/frontend.zip .
-          cd ../../backend && zip -r ../deploy/backend.zip .
-          cd ..
+          # Copy frontend build
+          cp -r frontend/dist/* deploy/frontend/
+
+          # Copy backend files (excluding node_modules and other unnecessary files)
+          cp backend/package*.json deploy/backend/
+          cp -r backend/controllers backend/models backend/middleware backend/routes backend/utils deploy/backend/
+          cp backend/server.js deploy/backend/
+          cp backend/.env.example deploy/backend/
+
+          # Create deploy script
+          cat > deploy/deploy.sh << 'EOF'
+          #!/bin/bash
+
+          # Stop PM2 processes
+          pm2 stop all || true
+
+          # Deploy frontend
+          rm -rf /home/bitnami/apps/frontend/*
+          cp -r frontend/* /home/bitnami/apps/frontend/
+
+          # Deploy backend
+          cd /home/bitnami/apps/backend
+
+          # Backup .env if it exists
+          if [ -f .env ]; then
+            cp .env .env.backup
+          fi
+
+          # Remove old files but keep node_modules and .env
+          find . -mindepth 1 -maxdepth 1 ! -name 'node_modules' ! -name '.env' ! -name '.env.backup' -exec rm -rf {} +
+
+          # Copy new files
+          cp -r ../deploy/backend/* .
+
+          # Restore .env
+          if [ -f .env.backup ]; then
+            mv .env.backup .env
+          fi
+
+          # Install any new dependencies
+          npm ci --production
+
+          # Restart PM2
+          pm2 restart all --update-env
+          EOF
+
+          chmod +x deploy/deploy.sh
 
           # Upload to Lightsail instance
           instance_ip="${{ secrets.LIGHTSAIL_IP }}"
 
-          # Copy files to instance using SCP
-          scp -o StrictHostKeyChecking=no \
-              -i lightsail_key.pem \
-              deploy/frontend.zip deploy/backend.zip \
-              bitnami@${instance_ip}:/home/bitnami/apps/
-
-          # Execute deployment commands
+          # Create remote directory structure
           ssh -o StrictHostKeyChecking=no \
               -i lightsail_key.pem \
               bitnami@${instance_ip} \
-              "cd /home/bitnami/apps && \
-               unzip -o frontend.zip -d frontend && \
-               unzip -o backend.zip -d backend && \
-               cd backend && npm install && \
-               pm2 restart all"
+              "mkdir -p /home/bitnami/apps/deploy"
+
+          # Copy deployment files
+          scp -o StrictHostKeyChecking=no \
+              -i lightsail_key.pem \
+              -r deploy/* \
+              bitnami@${instance_ip}:/home/bitnami/apps/deploy/
+
+          # Execute deployment
+          ssh -o StrictHostKeyChecking=no \
+              -i lightsail_key.pem \
+              bitnami@${instance_ip} \
+              "cd /home/bitnami/apps && bash deploy/deploy.sh"
 
       - name: Cleanup
         run: rm -rf deploy lightsail_key.pem
