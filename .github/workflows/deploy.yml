@@ -59,11 +59,20 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > lightsail_key.pem
+          # Add newlines if they're missing
+          echo -e "${{ secrets.LIGHTSAIL_SSH_KEY }}" > lightsail_key.pem
           chmod 600 lightsail_key.pem
+          # Debug SSH connection (remove in production)
+          ssh-keygen -y -f lightsail_key.pem
 
       - name: Deploy to Lightsail
         run: |
+          # Debug information
+          echo "Testing SSH connection..."
+          ssh -v -o StrictHostKeyChecking=no \
+              -i lightsail_key.pem \
+              ubuntu@${instance_ip} "whoami"
+
           # Create deployment directory structure
           mkdir -p deploy/frontend deploy/backend
 
@@ -84,11 +93,11 @@ jobs:
           pm2 stop all || true
 
           # Deploy frontend
-          rm -rf /home/bitnami/apps/frontend/*
+          rm -rf /home/ubuntu/apps/frontend/*
           cp -r frontend/* /home/bitnami/apps/frontend/
 
           # Deploy backend
-          cd /home/bitnami/apps/backend
+          cd /home/ubuntu/apps/backend
 
           # Backup .env if it exists
           if [ -f .env ]; then
@@ -121,21 +130,20 @@ jobs:
           # Create remote directory structure
           ssh -o StrictHostKeyChecking=no \
               -i lightsail_key.pem \
-              bitnami@${instance_ip} \
-              "mkdir -p /home/bitnami/apps/deploy"
+              ubuntu@${instance_ip} \
+              "mkdir -p /home/ubuntu/apps/deploy"
 
           # Copy deployment files
           scp -o StrictHostKeyChecking=no \
               -i lightsail_key.pem \
               -r deploy/* \
-              bitnami@${instance_ip}:/home/bitnami/apps/deploy/
+              ubuntu@${instance_ip}:/home/ubuntu/apps/deploy/
 
           # Execute deployment
           ssh -o StrictHostKeyChecking=no \
               -i lightsail_key.pem \
-              bitnami@${instance_ip} \
-              "cd /home/bitnami/apps && bash deploy/deploy.sh"
+              ubuntu@${instance_ip} \
+              "cd /home/ubuntu/apps && bash deploy/deploy.sh"
 
       - name: Cleanup
         run: rm -rf deploy lightsail_key.pem
-        
