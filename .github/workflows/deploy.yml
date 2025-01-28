@@ -16,18 +16,29 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: "20"
+          cache: "npm" # Enable npm caching
 
       - name: Install & Build Frontend
         run: |
           cd frontend
-          npm ci
+          # Check if package-lock.json exists
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+          fi
           npm run build
 
       # Build Backend
       - name: Install Backend Dependencies
         run: |
           cd backend
-          npm install
+          # Check if package-lock.json exists
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       # Deploy to Lightsail
       - name: Configure AWS credentials
