@@ -34,12 +34,6 @@ jobs:
           npm install
 
       # Deploy to Lightsail
-      - name: Install AWS CLI
-        run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -47,33 +41,40 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Get Lightsail SSH key
+        run: |
+          # Download SSH key from Lightsail
+          aws lightsail download-default-key-pair --output text > lightsail_key.pem
+          chmod 600 lightsail_key.pem
+
       - name: Deploy to Lightsail
         run: |
-          # Zip the applications
-          cd frontend/dist && zip -r ../../frontend.zip .
-          cd ../../backend && zip -r ../backend.zip .
+          # Create deployment directory
+          mkdir -p deploy
+
+          # Package applications
+          cd frontend/dist && zip -r ../../deploy/frontend.zip .
+          cd ../../backend && zip -r ../deploy/backend.zip .
           cd ..
 
-          # Upload to Lightsail
-          aws lightsail upload-object \
-            --service-name ${{ secrets.LIGHTSAIL_INSTANCE_NAME }} \
-            --path /home/bitnami/apps/frontend.zip \
-            --source frontend.zip
-            
-          aws lightsail upload-object \
-            --service-name ${{ secrets.LIGHTSAIL_INSTANCE_NAME }} \
-            --path /home/bitnami/apps/backend.zip \
-            --source backend.zip
-            
-          # Execute deployment script on Lightsail
-          aws lightsail get-instance-access-details \
-            --instance-name ${{ secrets.LIGHTSAIL_INSTANCE_NAME }} \
-            --protocol SSH | \
-            aws lightsail start-instance-access-details-entry \
-            --instance-name ${{ secrets.LIGHTSAIL_INSTANCE_NAME }} \
-            --protocol SSH \
-            --command "cd /home/bitnami/apps && \
-                      unzip -o frontend.zip -d frontend && \
-                      unzip -o backend.zip -d backend && \
-                      cd backend && npm install && \
-                      pm2 restart all"
+          # Upload to Lightsail instance
+          instance_ip=$(aws lightsail get-instance --instance-name ${{ secrets.LIGHTSAIL_INSTANCE_NAME }} --query 'instance.publicIpAddress' --output text)
+
+          # Copy files to instance using SCP
+          scp -o StrictHostKeyChecking=no \
+              -i lightsail_key.pem \
+              deploy/frontend.zip deploy/backend.zip \
+              bitnami@${instance_ip}:/home/bitnami/apps/
+
+          # Execute deployment commands
+          ssh -o StrictHostKeyChecking=no \
+              -i lightsail_key.pem \
+              bitnami@${instance_ip} \
+              "cd /home/bitnami/apps && \
+               unzip -o frontend.zip -d frontend && \
+               unzip -o backend.zip -d backend && \
+               cd backend && npm install && \
+               pm2 restart all"
+
+      - name: Cleanup
+        run: rm -rf deploy lightsail_key.pem
