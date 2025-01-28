@@ -16,29 +16,37 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: "20"
-          cache: "npm" # Enable npm caching
+
+      # Cache frontend dependencies
+      - name: Cache Frontend Dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            frontend/node_modules
+          key: ${{ runner.os }}-frontend-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-
+
+      # Cache backend dependencies
+      - name: Cache Backend Dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            backend/node_modules
+          key: ${{ runner.os }}-backend-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-
 
       - name: Install & Build Frontend
         run: |
           cd frontend
-          # Check if package-lock.json exists
-          if [ -f "package-lock.json" ]; then
-            npm ci
-          else
-            npm install
-          fi
+          npm install
           npm run build
 
-      # Build Backend
       - name: Install Backend Dependencies
         run: |
           cd backend
-          # Check if package-lock.json exists
-          if [ -f "package-lock.json" ]; then
-            npm ci
-          else
-            npm install
-          fi
+          npm install
 
       # Deploy to Lightsail
       - name: Configure AWS credentials
@@ -130,3 +138,4 @@ jobs:
 
       - name: Cleanup
         run: rm -rf deploy lightsail_key.pem
+        
