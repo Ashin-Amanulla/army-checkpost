@@ -41,10 +41,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Get Lightsail SSH key
+      - name: Setup SSH key
         run: |
-          # Download SSH key from Lightsail
-          aws lightsail download-default-key-pair --output text > lightsail_key.pem
+          mkdir -p ~/.ssh
+          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > lightsail_key.pem
           chmod 600 lightsail_key.pem
 
       - name: Deploy to Lightsail
@@ -58,7 +58,7 @@ jobs:
           cd ..
 
           # Upload to Lightsail instance
-          instance_ip=$(aws lightsail get-instance --instance-name ${{ secrets.LIGHTSAIL_INSTANCE_NAME }} --query 'instance.publicIpAddress' --output text)
+          instance_ip="${{ secrets.LIGHTSAIL_IP }}"
 
           # Copy files to instance using SCP
           scp -o StrictHostKeyChecking=no \
