@@ -91,7 +91,7 @@ jobs:
 
           # Copy backend files (excluding node_modules and other unnecessary files)
           cp backend/package*.json deploy/backend/
-          cp -r backend/controllers backend/models backend/middleware backend/routes backend/utils deploy/backend/
+          cp -r backend/controllers backend/models backend/middleware backend/routes backend/utils backend/swagger deploy/backend/
           cp backend/server.js deploy/backend/
           cp backend/.env.example deploy/backend/
 
