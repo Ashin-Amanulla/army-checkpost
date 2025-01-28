@@ -67,6 +67,16 @@ jobs:
 
       - name: Deploy to Lightsail
         run: |
+          # Set instance IP
+          instance_ip="${{ secrets.LIGHTSAIL_IP }}"
+
+          # Debug IP
+          echo "Connecting to instance: ${instance_ip}"
+          if [ -z "${instance_ip}" ]; then
+            echo "Error: Instance IP is empty"
+            exit 1
+          fi
+
           # Debug information
           echo "Testing SSH connection..."
           ssh -v -o StrictHostKeyChecking=no \
@@ -123,9 +133,6 @@ jobs:
           EOF
 
           chmod +x deploy/deploy.sh
-
-          # Upload to Lightsail instance
-          instance_ip="${{ secrets.LIGHTSAIL_IP }}"
 
           # Create remote directory structure
           ssh -o StrictHostKeyChecking=no \
