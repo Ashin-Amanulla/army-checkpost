@@ -99,12 +99,15 @@ jobs:
           cat > deploy/deploy.sh << 'EOF'
           #!/bin/bash
 
+          # Create necessary directories
+          mkdir -p /home/ubuntu/apps/{frontend,backend}
+
           # Stop PM2 processes
           pm2 stop all || true
 
           # Deploy frontend
           rm -rf /home/ubuntu/apps/frontend/*
-          cp -r frontend/* /home/bitnami/apps/frontend/
+          cp -r /home/ubuntu/apps/deploy/frontend/* /home/ubuntu/apps/frontend/
 
           # Deploy backend
           cd /home/ubuntu/apps/backend
@@ -118,7 +121,7 @@ jobs:
           find . -mindepth 1 -maxdepth 1 ! -name 'node_modules' ! -name '.env' ! -name '.env.backup' -exec rm -rf {} +
 
           # Copy new files
-          cp -r ../deploy/backend/* .
+          cp -r /home/ubuntu/apps/deploy/backend/* .
 
           # Restore .env
           if [ -f .env.backup ]; then
@@ -126,10 +129,15 @@ jobs:
           fi
 
           # Install any new dependencies
-          npm ci --production
+          npm install --omit=dev
 
           # Restart PM2
-          pm2 restart all --update-env
+          if ! pm2 list | grep -q "online\|stopped"; then
+            cd /home/ubuntu/apps/backend
+            pm2 start server.js
+          else
+            pm2 restart all --update-env
+          fi
           EOF
 
           chmod +x deploy/deploy.sh
@@ -138,13 +146,25 @@ jobs:
           ssh -o StrictHostKeyChecking=no \
               -i lightsail_key.pem \
               ubuntu@${instance_ip} \
-              "mkdir -p /home/ubuntu/apps/deploy"
+              "mkdir -p /home/ubuntu/apps/{frontend,backend,deploy}"
+
+          # Ensure correct permissions
+          ssh -o StrictHostKeyChecking=no \
+              -i lightsail_key.pem \
+              ubuntu@${instance_ip} \
+              "sudo chown -R ubuntu:ubuntu /home/ubuntu/apps"
 
           # Copy deployment files
           scp -o StrictHostKeyChecking=no \
               -i lightsail_key.pem \
               -r deploy/* \
               ubuntu@${instance_ip}:/home/ubuntu/apps/deploy/
+
+          # Install Node.js and PM2 if not already installed
+          ssh -o StrictHostKeyChecking=no \
+              -i lightsail_key.pem \
+              ubuntu@${instance_ip} \
+              "which node || curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs && sudo npm install -g pm2"
 
           # Execute deployment
           ssh -o StrictHostKeyChecking=no \
