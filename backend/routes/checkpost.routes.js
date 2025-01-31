@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
+const { createAuditLog } = require('../controllers/auditLogController');
 const {
     createCheckpost,
     getCheckposts,
@@ -8,48 +9,34 @@ const {
     deleteCheckpost
 } = require('../controllers/checkpost.controller');
 
-/**
- * @swagger
- * /checkposts:
- *   post:
- *     summary: Create new checkpost
- *     tags: [Checkposts]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - code
- *               - location
- *             properties:
- *               name:
- *                 type: string
- *               code:
- *                 type: string
- *               location:
- *                 type: string
- *     responses:
- *       201:
- *         description: Checkpost created successfully
- *
- *   get:
- *     summary: Get all checkposts
- *     tags: [Checkposts]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of checkposts
- */
+const wrapWithAudit = (handler, action) => {
+    return async (req, res) => {
+        try {
+            const result = await handler(req, res);
+            await createAuditLog(
+                req,
+                action,
+                'CHECKPOST',
+                `${action}: Checkpost ${req.params.id || 'new'}`,
+                {
+                    checkpostId: req.params.id,
+                    checkpostName: req.body.name,
+                    changes: req.body
+                }
+            );
+            return result;
+        } catch (error) {
+            res.status(500).json({ message: error.message });
+        }
+    };
+};
 
-router.post('/', protect, authorize('super_admin'), createCheckpost);
-router.get('/', protect, getCheckposts);
-router.put('/:id', protect, authorize('super_admin'), updateCheckpost);
-router.delete('/:id', protect, authorize('super_admin'), deleteCheckpost);
+router.use(protect);
+router.use(authorize(['super_admin', 'admin']));
+
+router.post('/', wrapWithAudit(createCheckpost, 'CHECKPOST_CREATE'));
+router.get('/', wrapWithAudit(getCheckposts, 'VIEW_CHECKPOSTS'));
+router.put('/:id', wrapWithAudit(updateCheckpost, 'CHECKPOST_UPDATE'));
+router.delete('/:id', wrapWithAudit(deleteCheckpost, 'CHECKPOST_DELETE'));
 
 module.exports = router; 

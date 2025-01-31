@@ -2,78 +2,184 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '24h'
-    });
-};
+const authController = {
+    // Register new user
+    register: async (req, res) => {
+        try {
+            const { username, password, fullName, role, checkpost } = req.body;
 
-exports.register = async (req, res) => {
-    try {
-        const { username, password, email, role, checkpost } = req.body;
+            // Check if user already exists
+            const existingUser = await User.findOne({ username });
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Username already exists'
+                });
+            }
 
-        const userExists = await User.findOne({ username });
-        if (userExists) {
-            return res.status(400).json({ message: 'Username already exists' });
-        }
-
-        const user = await User.create({
-            username,
-            password,
-            email,
-            role,
-            checkpost
-        });
-
-        res.status(201).json({
-            _id: user._id,
-            username: user.username,
-            email: user.email,
-            role: user.role,
-            token: generateToken(user._id)
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-exports.login = async (req, res) => {
-    try {
-        const { username, password } = req.body;
-
-        // Find by username
-        const user = await User.findOne({ username });
-
-        if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-
-        // Compare bcrypt hash
-        const isMatch = await bcrypt.compare(password, user.password);
-
-        if (isMatch) {
-            res.json({
-                _id: user._id,
-                username: user.username,
-                email: user.email,
-                role: user.role,
-                token: generateToken(user._id),
-                tokenCreatedAt: new Date().toISOString()
+            // Create new user
+            const user = await User.create({
+                username,
+                password,
+                fullName,
+                role: role || 'user',
+                checkpost
             });
-        } else {
-            res.status(401).json({ message: 'Invalid credentials' });
+
+            // Generate token
+            const token = jwt.sign(
+                { id: user._id },
+                process.env.JWT_SECRET,
+                { expiresIn: '1d' }
+            );
+
+            res.status(201).json({
+                success: true,
+                data: {
+                    token,
+                    user: {
+                        id: user._id,
+                        username: user.username,
+                        fullName: user.fullName,
+                        role: user.role,
+                        checkpost: user.checkpost
+                    }
+                }
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
         }
-    } catch (error) {
-        console.error('Login error:', error); // Debug log
-        res.status(500).json({ message: error.message });
+    },
+
+    // Login user
+    login: async (req, res) => {
+        try {
+            const { username, password } = req.body;
+
+            // Check if user exists
+            const user = await User.findOne({ username })
+                .select('+password')
+                .populate('checkpost', 'name code');
+
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid credentials'
+                });
+            }
+
+            // Check password
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid credentials'
+                });
+            }
+
+            // Generate token
+            const token = jwt.sign(
+                { id: user._id },
+                process.env.JWT_SECRET,
+                { expiresIn: '1d' }
+            );
+
+            res.json({
+                success: true,
+                data: {
+                    token,
+                    user: {
+                        id: user._id,
+                        username: user.username,
+                        fullName: user.fullName,
+                        role: user.role,
+                        checkpost: user.checkpost
+                    }
+                }
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    },
+
+    // Get current user
+    getMe: async (req, res) => {
+        try {
+            const user = await User.findById(req.user.id)
+                .populate('checkpost', 'name code');
+
+            res.json({
+                success: true,
+                data: user
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    },
+
+    // Update user profile
+    updateProfile: async (req, res) => {
+        try {
+            const { fullName, password } = req.body;
+            const updateData = { fullName };
+
+            if (password) {
+                const salt = await bcrypt.genSalt(10);
+                updateData.password = await bcrypt.hash(password, salt);
+            }
+
+            const user = await User.findByIdAndUpdate(
+                req.user.id,
+                updateData,
+                { new: true, runValidators: true }
+            ).populate('checkpost', 'name code');
+
+            res.json({
+                success: true,
+                data: user
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    },
+
+    // Get all users (admin only)
+    getUsers: async (req, res) => {
+        try {
+            // Only super_admin can see all users, admin can only see users of their checkpost
+            const query = req.user.role === 'super_admin'
+                ? {}
+                : { checkpost: req.user.checkpost };
+
+            const users = await User.find(query)
+                .populate('checkpost', 'name code')
+                .select('-password')
+                .sort('-createdAt');
+
+            res.json({
+                success: true,
+                data: users
+            });
+        } catch (error) {
+            console.error('Error in getUsers:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
     }
 };
 
-exports.getProfile = async (req, res) => {
-    try {
-        const user = await User.findById(req.user._id).select('-password');
-        res.json(user);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-}; 
+module.exports = authController; 

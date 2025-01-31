@@ -24,17 +24,42 @@ import {
   TablePagination,
   CircularProgress,
 } from "@mui/material";
-import { Search, ExitToApp, Visibility } from "@mui/icons-material";
+import {
+  Search,
+  ExitToApp,
+  Visibility,
+  GridView,
+  ViewList,
+  FilterList,
+  DirectionsCar,
+} from "@mui/icons-material";
 import { vehicleAPI, vehicleTypeAPI } from "../services/api";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import toast from "react-hot-toast";
 import useStore from "../store/useStore";
+import {
+  DateRangeFilter,
+  Select,
+  StatusBadge,
+  ViewToggle,
+  PageHeader,
+  Modal,
+  LoadingSpinner,
+  FilterBar,
+  VehicleCard,
+  EmptyState,
+} from "../components/ui";
+import { useTheme } from "../contexts/ThemeContext";
+import { format } from "date-fns";
 
 function VehicleList() {
+  const { theme } = useTheme();
   const [vehicles, setVehicles] = useState([]);
   const [vehicleTypes, setVehicleTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     startDate: null,
     endDate: null,
@@ -73,9 +98,16 @@ function VehicleList() {
         endDate: filters.endDate?.toISOString(),
       };
       const { data } = await vehicleAPI.getEntries(params);
-      setVehicles(data);
+      if (data.success && Array.isArray(data.data)) {
+        setVehicles(data.data);
+      } else {
+        console.error('Unexpected data format:', data);
+        setVehicles([]);
+      }
     } catch (error) {
+      console.error('Error fetching vehicles:', error);
       toast.error("Failed to fetch vehicles");
+      setVehicles([]);
     } finally {
       setLoading(false);
     }
@@ -108,197 +140,257 @@ function VehicleList() {
   };
 
   const getStatusColor = (status) => {
-    return status === "entered" ? "success" : "default";
+    return status === "entered"
+      ? "bg-green-100 text-green-800 border-green-200"
+      : "bg-gray-100 text-gray-800 border-gray-200";
   };
 
   return (
-    <Box>
-      <Typography variant="h5" component="h1" className="mb-6">
-        Vehicle List
-      </Typography>
+    <div className="space-y-6">
+      <PageHeader
+        title="Vehicle Entries"
+        subtitle="Track and manage vehicle movements"
+        icon={<DirectionsCar className="w-6 h-6" />}
+        actions={
+          <div className="flex items-center gap-2">
+            <ViewToggle view={viewMode} onToggle={setViewMode} />
+            <Button
+              variant="secondary"
+              onClick={() => setShowFilters(!showFilters)}
+              className={showFilters ? "bg-green-50 text-green-600" : ""}
+            >
+              <FilterList className="w-5 h-5 mr-2" />
+              Filters
+            </Button>
+          </div>
+        }
+      />
 
-      <Card className="mb-6">
-        <CardContent>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={3}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Start Date"
-                  value={filters.startDate}
-                  onChange={(date) =>
-                    setFilters({ ...filters, startDate: date })
-                  }
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="End Date"
-                  value={filters.endDate}
-                  onChange={(date) => setFilters({ ...filters, endDate: date })}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <TextField
-                fullWidth
-                select
-                label="Vehicle Type"
-                value={filters.vehicleType}
-                onChange={(e) =>
-                  setFilters({ ...filters, vehicleType: e.target.value })
-                }
-              >
-                <MenuItem value="">All</MenuItem>
-                {vehicleTypes.map((type) => (
-                  <MenuItem key={type._id} value={type._id}>
-                    {type.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <TextField
-                fullWidth
-                select
-                label="Status"
-                value={filters.status}
-                onChange={(e) =>
-                  setFilters({ ...filters, status: e.target.value })
-                }
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="entered">Entered</MenuItem>
-                <MenuItem value="exited">Exited</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} md={2}>
+      {/* Filters Section */}
+      {showFilters && (
+        <Card
+          className="bg-white"
+          style={{ borderColor: theme.colors.border.light }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <DateRangeFilter
+              startDate={filters.startDate}
+              endDate={filters.endDate}
+              onChange={(field, value) =>
+                setFilters({ ...filters, [field]: value })
+              }
+            />
+
+            <Select
+              value={filters.vehicleType}
+              onChange={(value) =>
+                setFilters({ ...filters, vehicleType: value })
+              }
+              options={vehicleTypes.map((type) => ({
+                value: type._id,
+                label: type.name,
+              }))}
+              placeholder="All Vehicle Types"
+              className="border-gray-300"
+            />
+
+            <Select
+              value={filters.status}
+              onChange={(value) => setFilters({ ...filters, status: value })}
+              options={[
+                { value: "entered", label: "Currently Inside" },
+                { value: "exited", label: "Exited" },
+              ]}
+              placeholder="All Status"
+            />
+
+            <div className="flex justify-end lg:col-span-4 gap-2">
               <Button
-                fullWidth
-                variant="contained"
-                onClick={handleSearch}
-                startIcon={<Search />}
+                variant="secondary"
+                onClick={() => {
+                  setFilters({
+                    startDate: null,
+                    endDate: null,
+                    vehicleType: "",
+                    status: "",
+                  });
+                }}
               >
-                Search
+                Clear
               </Button>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+              <Button variant="primary" onClick={handleSearch}>
+                Apply Filters
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Vehicle Number</TableCell>
-              <TableCell>Driver Name</TableCell>
-              <TableCell>Vehicle Type</TableCell>
-              <TableCell>Entry Time</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
-                  <CircularProgress />
-                </TableCell>
-              </TableRow>
-            ) : (
-              vehicles.map((vehicle) => (
-                <TableRow key={vehicle._id}>
-                  <TableCell>{vehicle.vehicleNumber}</TableCell>
-                  <TableCell>{vehicle.driverName}</TableCell>
-                  <TableCell>{vehicle.vehicleType.name}</TableCell>
-                  <TableCell>
-                    {new Date(vehicle.entryTime).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={vehicle.status}
-                      color={getStatusColor(vehicle.status)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton
-                      onClick={() => handleViewDetails(vehicle._id)}
-                      size="small"
-                    >
-                      <Visibility />
-                    </IconButton>
-                    {vehicle.status === "entered" && (
-                      <IconButton
-                        onClick={() => handleExitVehicle(vehicle._id)}
-                        size="small"
-                        color="primary"
-                      >
-                        <ExitToApp />
-                      </IconButton>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          component="div"
-          count={-1}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={(e, newPage) => setPage(newPage)}
-          onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
-            setPage(0);
-          }}
+      {/* Loading State */}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <LoadingSpinner size="lg" />
+        </div>
+      ) : !vehicles || vehicles.length === 0 ? (
+        <EmptyState
+          icon={DirectionsCar}
+          title="No vehicles found"
+          message="Try adjusting your filters or add a new vehicle entry"
+          action={
+            <Button
+              variant="primary"
+              onClick={() => navigate("/vehicle-entry")}
+            >
+              Add Vehicle Entry
+            </Button>
+          }
         />
-      </TableContainer>
+      ) : (
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              : "space-y-4"
+          }
+        >
+          {Array.isArray(vehicles) && 
+            vehicles.map((vehicle) => (
+              <VehicleCard
+                key={vehicle._id}
+                vehicle={vehicle}
+                onView={() => handleViewDetails(vehicle._id)}
+                onExit={
+                  vehicle.status === "entered"
+                    ? () => handleExitVehicle(vehicle._id)
+                    : undefined
+                }
+              />
+            ))}
+        </div>
+      )}
 
-      <Dialog
+      {/* Details Modal */}
+      <Modal
         open={detailsOpen}
         onClose={() => setDetailsOpen(false)}
-        maxWidth="md"
+        title={`Vehicle Entry - ${selectedVehicle?.vehicleNumber || ''}`}
       >
-        <DialogTitle>Vehicle Details</DialogTitle>
-        <DialogContent>
-          {selectedVehicle && (
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Vehicle Number</Typography>
-                <Typography>{selectedVehicle.vehicleNumber}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Driver Name</Typography>
-                <Typography>{selectedVehicle.driverName}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Driver Phone</Typography>
-                <Typography>{selectedVehicle.driverPhone}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Purpose</Typography>
-                <Typography>{selectedVehicle.purpose}</Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="subtitle2">Vehicle Photo</Typography>
+        {selectedVehicle && (
+          <div className="space-y-6">
+            {/* Vehicle Photo */}
+            {selectedVehicle.photoUrl && (
+              <div className="relative h-64 bg-gray-100 rounded-lg overflow-hidden">
                 <img
                   src={selectedVehicle.photoUrl}
-                  alt="Vehicle"
-                  className="max-w-full h-auto rounded-lg mt-2"
+                  alt={selectedVehicle.vehicleNumber}
+                  className="w-full h-full object-contain"
                 />
-              </Grid>
-            </Grid>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Vehicle Information */}
+              <div className="col-span-2">
+                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
+                  Vehicle Information
+                </h3>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Vehicle Number
+                </label>
+                <p className="mt-1 text-lg font-medium">
+                  {selectedVehicle.vehicleNumber}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Vehicle Type
+                </label>
+                <p className="mt-1 text-lg font-medium">
+                  {selectedVehicle.vehicleType?.name}
+                </p>
+              </div>
+
+              {/* Entry Information */}
+              <div className="col-span-2">
+                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
+                  Entry Information
+                </h3>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Checkpost
+                </label>
+                <p className="mt-1 text-lg font-medium">
+                  {selectedVehicle.checkpost?.name} ({selectedVehicle.checkpost?.code})
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Entry Time
+                </label>
+                <p className="mt-1 text-lg font-medium">
+                  {format(new Date(selectedVehicle.createdAt), "dd/MM/yyyy HH:mm")}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Entered By
+                </label>
+                <p className="mt-1 text-lg font-medium">
+                  {selectedVehicle.createdBy?.fullName || selectedVehicle.createdBy?.username}
+                </p>
+              </div>
+
+              {/* Driver Information */}
+              <div className="col-span-2">
+                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
+                  Driver Information
+                </h3>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Driver Name
+                </label>
+                <p className="mt-1 text-lg font-medium">
+                  {selectedVehicle.driverName}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Driver Phone
+                </label>
+                <p className="mt-1 text-lg font-medium">
+                  {selectedVehicle.driverPhone}
+                </p>
+              </div>
+
+              {/* Purpose */}
+              <div className="col-span-2">
+                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
+                  Additional Details
+                </h3>
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-gray-500">
+                  Purpose of Visit
+                </label>
+                <p className="mt-1 text-lg font-medium">
+                  {selectedVehicle.purpose}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 pt-4 border-t">
+              <Button variant="secondary" onClick={() => setDetailsOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
   );
 }
 

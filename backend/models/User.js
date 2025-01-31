@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
     role: {
         type: String,
         enum: ['super_admin', 'admin', 'user'],
-        default: 'user'
+        required: true
     },
     checkpost: {
         type: mongoose.Schema.Types.ObjectId,

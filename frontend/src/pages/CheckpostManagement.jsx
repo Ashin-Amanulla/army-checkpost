@@ -1,26 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  TextField,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  CircularProgress,
-} from "@mui/material";
-import { Edit, Delete } from "@mui/icons-material";
+import { Add, Edit, Delete, LocationOn } from "@mui/icons-material";
 import { checkpostAPI } from "../services/api";
 import toast from "react-hot-toast";
 
@@ -68,15 +47,11 @@ function CheckpostManagement() {
     }
   };
 
-  const handleEdit = (checkpost) => {
-    setSelectedCheckpost(checkpost);
-    setFormData({
-      name: checkpost.name,
-      location: checkpost.location,
-      code: checkpost.code,
-    });
-    setEditMode(true);
-    setDialogOpen(true);
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditMode(false);
+    setSelectedCheckpost(null);
+    setFormData({ name: "", location: "", code: "" });
   };
 
   const handleDelete = async (id) => {
@@ -91,110 +66,155 @@ function CheckpostManagement() {
     }
   };
 
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setEditMode(false);
-    setSelectedCheckpost(null);
-    setFormData({ name: "", location: "", code: "" });
-  };
-
-  if (loading) {
-    return <CircularProgress />;
-  }
-
   return (
-    <Box>
-      <Box className="flex justify-between items-center mb-6">
-        <Typography variant="h5" component="h1">
-          Checkpost Management
-        </Typography>
-        <Button variant="contained" onClick={() => setDialogOpen(true)}>
-          Add New Checkpost
-        </Button>
-      </Box>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Checkpost Management</h1>
+          <p className="text-sm text-gray-600">Manage military checkposts</p>
+        </div>
+        <button
+          onClick={() => {
+            setEditMode(false);
+            setDialogOpen(true);
+          }}
+          className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+        >
+          <Add className="w-5 h-5 mr-2" />
+          Add Checkpost
+        </button>
+      </div>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Code</TableCell>
-              <TableCell>Location</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {checkposts.map((checkpost) => (
-              <TableRow key={checkpost._id}>
-                <TableCell>{checkpost.name}</TableCell>
-                <TableCell>{checkpost.code}</TableCell>
-                <TableCell>{checkpost.location}</TableCell>
-                <TableCell>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleEdit(checkpost)}
+      {/* Checkpost Grid */}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-900"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {checkposts.map((checkpost) => (
+            <div key={checkpost._id} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-green-50 rounded-full">
+                      <LocationOn className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900">
+                        {checkpost.name}
+                      </h3>
+                      <p className="text-sm text-gray-500">Code: {checkpost.code}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    checkpost.active 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {checkpost.active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Location:</span> {checkpost.location}
+                  </p>
+                </div>
+
+                <div className="mt-4 flex justify-end space-x-2 border-t pt-4">
+                  <button
+                    onClick={() => {
+                      setSelectedCheckpost(checkpost);
+                      setFormData({
+                        name: checkpost.name,
+                        location: checkpost.location,
+                        code: checkpost.code,
+                      });
+                      setEditMode(true);
+                      setDialogOpen(true);
+                    }}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
                   >
-                    <Edit />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    color="error"
+                    <Edit className="w-5 h-5" />
+                  </button>
+                  <button
                     onClick={() => handleDelete(checkpost._id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-full"
                   >
-                    <Delete />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                    <Delete className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <Dialog open={dialogOpen} onClose={handleCloseDialog}>
-        <DialogTitle>
-          {editMode ? "Edit Checkpost" : "Add New Checkpost"}
-        </DialogTitle>
-        <form onSubmit={handleSubmit}>
-          <DialogContent>
-            <Box className="space-y-4">
-              <TextField
-                fullWidth
-                label="Name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
-              <TextField
-                fullWidth
-                label="Code"
-                value={formData.code}
-                onChange={(e) =>
-                  setFormData({ ...formData, code: e.target.value })
-                }
-                required
-              />
-              <TextField
-                fullWidth
-                label="Location"
-                value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
-                required
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button type="submit" variant="contained">
-              {editMode ? "Update" : "Create"}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-    </Box>
+      {/* Checkpost Form Dialog */}
+      {dialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editMode ? "Edit Checkpost" : "Add New Checkpost"}
+              </h2>
+              <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Name</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Code</label>
+                  <input
+                    type="text"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Location</label>
+                  <textarea
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleCloseDialog}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    {editMode ? "Update" : "Create"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

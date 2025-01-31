@@ -1,20 +1,11 @@
 import { useState, useEffect } from "react";
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Typography,
-  MenuItem,
-  Grid,
-  CircularProgress,
-} from "@mui/material";
+import { vehicleAPI, vehicleTypeAPI, checkpostAPI } from "../services/api";
 import { PhotoCamera } from "@mui/icons-material";
-import { vehicleAPI, vehicleTypeAPI } from "../services/api";
 import toast from "react-hot-toast";
+import useStore from "../store/useStore";
 
 function VehicleEntry() {
+  const { user } = useStore();
   const [formData, setFormData] = useState({
     vehicleNumber: "",
     vehicleType: "",
@@ -22,21 +13,35 @@ function VehicleEntry() {
     driverPhone: "",
     purpose: "",
     photo: null,
+    checkpost: user.role === "user" ? user.checkpost : "",
   });
+  const [checkposts, setCheckposts] = useState([]);
   const [vehicleTypes, setVehicleTypes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
 
   useEffect(() => {
     fetchVehicleTypes();
-  }, []);
+    if (user.role !== "user") {
+      fetchCheckposts();
+    }
+  }, [user.role]);
 
   const fetchVehicleTypes = async () => {
     try {
-      const { data } = await vehicleTypeAPI.getAll();
-      setVehicleTypes(data);
+      const response = await vehicleTypeAPI.getAll();
+      setVehicleTypes(response.data);
     } catch (error) {
       toast.error("Failed to fetch vehicle types");
+    }
+  };
+
+  const fetchCheckposts = async () => {
+    try {
+      const response = await checkpostAPI.getAll();
+      setCheckposts(response.data);
+    } catch (error) {
+      toast.error("Failed to fetch checkposts");
     }
   };
 
@@ -53,15 +58,57 @@ function VehicleEntry() {
     setLoading(true);
 
     try {
-      // Create FormData for file upload
       const formDataToSend = new FormData();
-      Object.keys(formData).forEach((key) => {
-        formDataToSend.append(key, formData[key]);
+
+      // Debug logs
+      console.log("Original form data:", {
+        vehicleNumber: formData.vehicleNumber,
+        vehicleType: formData.vehicleType,
+        driverName: formData.driverName,
+        driverPhone: formData.driverPhone,
+        purpose: formData.purpose,
+        checkpost: formData.checkpost,
+        photo: formData.photo,
       });
 
-      await vehicleAPI.createEntry(formDataToSend);
-      toast.success("Vehicle entry created successfully");
+      // Append all form fields
+      if (formData.vehicleNumber)
+        formDataToSend.append("vehicleNumber", formData.vehicleNumber.trim());
+      if (formData.vehicleType)
+        formDataToSend.append("vehicleType", formData.vehicleType);
+      if (formData.driverName)
+        formDataToSend.append("driverName", formData.driverName.trim());
+      if (formData.driverPhone)
+        formDataToSend.append("driverPhone", formData.driverPhone.trim());
+      if (formData.purpose)
+        formDataToSend.append("purpose", formData.purpose.trim());
 
+      // Append checkpost if user is not a regular user
+      if (user.role !== "user") {
+        if (formData.checkpost)
+          formDataToSend.append("checkpost", formData.checkpost);
+      } else {
+        // For regular users, use their assigned checkpost
+        formDataToSend.append("checkpost", user.checkpost);
+      }
+
+      // Append photo if exists
+      if (formData.photo) {
+        formDataToSend.append("photo", formData.photo, formData.photo.name);
+      }
+
+      // Debug: Log all FormData entries
+      console.log("FormData contents:");
+      for (let pair of formDataToSend.entries()) {
+        console.log(
+          `${pair[0]}: ${pair[1] instanceof File ? pair[1].name : pair[1]}`
+        );
+      }
+
+      const response = await vehicleAPI.createEntry(formDataToSend);
+      console.log("Server response:", response);
+
+      toast.success("Vehicle entry created successfully");
       // Reset form
       setFormData({
         vehicleNumber: "",
@@ -70,9 +117,11 @@ function VehicleEntry() {
         driverPhone: "",
         purpose: "",
         photo: null,
+        checkpost: user.role === "user" ? user.checkpost : "",
       });
       setPhotoPreview(null);
     } catch (error) {
+      console.error("Error creating entry:", error);
       toast.error(error.response?.data?.message || "Failed to create entry");
     } finally {
       setLoading(false);
@@ -80,19 +129,30 @@ function VehicleEntry() {
   };
 
   return (
-    <Box className="max-w-2xl mx-auto">
-      <Typography variant="h5" component="h1" className="mb-6">
-        New Vehicle Entry
-      </Typography>
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-green-800 to-green-900 text-white px-8 py-6">
+          <h2 className="text-xl font-semibold">New Vehicle Entry</h2>
+          <p className="text-sm text-green-100 mt-2 opacity-90">
+            Enter vehicle and driver information for checkpoint entry
+          </p>
+        </div>
 
-      <Card>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Vehicle Number"
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          {/* Vehicle Details Section */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+              Vehicle Information
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Vehicle Number *
+                </label>
+                <input
+                  type="text"
                   value={formData.vehicleNumber}
                   onChange={(e) =>
                     setFormData({
@@ -100,15 +160,17 @@ function VehicleEntry() {
                       vehicleNumber: e.target.value.toUpperCase(),
                     })
                   }
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
+                  placeholder="Enter vehicle number"
                   required
                 />
-              </Grid>
+              </div>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Vehicle Type"
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Vehicle Type *
+                </label>
+                <select
                   value={formData.vehicleType}
                   onChange={(e) =>
                     setFormData({
@@ -116,20 +178,56 @@ function VehicleEntry() {
                       vehicleType: e.target.value,
                     })
                   }
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-gray-600"
                   required
                 >
+                  <option value="">Select vehicle type</option>
                   {vehicleTypes.map((type) => (
-                    <MenuItem key={type._id} value={type._id}>
+                    <option key={type._id} value={type._id}>
                       {type.name}
-                    </MenuItem>
+                    </option>
                   ))}
-                </TextField>
-              </Grid>
+                </select>
+              </div>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Driver Name"
+              {user.role !== "user" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Checkpost *
+                  </label>
+                  <select
+                    value={formData.checkpost}
+                    onChange={(e) =>
+                      setFormData({ ...formData, checkpost: e.target.value })
+                    }
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-gray-600"
+                    required
+                  >
+                    <option value="">Select checkpoint location</option>
+                    {checkposts.map((checkpost) => (
+                      <option key={checkpost._id} value={checkpost._id}>
+                        {checkpost.name} ({checkpost.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Driver Details Section */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+              Driver Information
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Driver Name *
+                </label>
+                <input
+                  type="text"
                   value={formData.driverName}
                   onChange={(e) =>
                     setFormData({
@@ -137,14 +235,18 @@ function VehicleEntry() {
                       driverName: e.target.value,
                     })
                   }
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
+                  placeholder="Enter driver's full name"
                   required
                 />
-              </Grid>
+              </div>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Driver Phone"
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Driver Phone *
+                </label>
+                <input
+                  type="tel"
                   value={formData.driverPhone}
                   onChange={(e) =>
                     setFormData({
@@ -152,71 +254,113 @@ function VehicleEntry() {
                       driverPhone: e.target.value,
                     })
                   }
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
+                  placeholder="Enter contact number"
                   required
                 />
-              </Grid>
+              </div>
+            </div>
+          </div>
 
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Purpose"
-                  multiline
-                  rows={2}
-                  value={formData.purpose}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      purpose: e.target.value,
-                    })
-                  }
-                  required
-                />
-              </Grid>
+          {/* Purpose & Photo Section */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+              Additional Details
+            </h3>
 
-              <Grid item xs={12}>
-                <Box className="space-y-2">
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<PhotoCamera />}
-                  >
-                    Upload Photo
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      required
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Purpose of Visit *
+              </label>
+              <textarea
+                value={formData.purpose}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    purpose: e.target.value,
+                  })
+                }
+                rows={3}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
+                placeholder="Enter purpose of visit"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Vehicle Photo *
+              </label>
+              <div className="mt-2 flex flex-col items-center justify-center px-6 py-8 border-2 border-gray-300 border-dashed rounded-lg hover:border-green-500 transition-colors duration-200">
+                {photoPreview ? (
+                  <div className="space-y-2">
+                    <img
+                      src={photoPreview}
+                      alt="Preview"
+                      className="max-h-48 rounded-lg shadow-md"
                     />
-                  </Button>
-                  {photoPreview && (
-                    <Box className="mt-2">
-                      <img
-                        src={photoPreview}
-                        alt="Vehicle preview"
-                        className="max-w-xs rounded-lg shadow-md"
-                      />
-                    </Box>
-                  )}
-                </Box>
-              </Grid>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhotoPreview(null);
+                        setFormData({ ...formData, photo: null });
+                      }}
+                      className="text-sm text-red-600 hover:text-red-800 font-medium"
+                    >
+                      Remove photo
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1 text-center">
+                    <PhotoCamera className="mx-auto h-12 w-12 text-gray-400 group-hover:text-green-500" />
+                    <div className="flex text-sm text-gray-600">
+                      <label className="relative cursor-pointer rounded-md font-medium text-green-600 hover:text-green-500">
+                        <span>Upload a photo</span>
+                        <input
+                          type="file"
+                          className="sr-only"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                          required={!formData.photo}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Click or drag and drop to upload
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
-              <Grid item xs={12}>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  type="submit"
-                  disabled={loading}
-                  size="large"
-                >
-                  {loading ? <CircularProgress size={24} /> : "Create Entry"}
-                </Button>
-              </Grid>
-            </Grid>
-          </form>
-        </CardContent>
-      </Card>
-    </Box>
+          {/* Submit Button */}
+          <div className="flex justify-end space-x-4 border-t pt-6">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+            >
+              Reset Form
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-8 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              {loading ? (
+                <span className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Creating...</span>
+                </span>
+              ) : (
+                "Create Entry"
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 

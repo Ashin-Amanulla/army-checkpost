@@ -1,13 +1,19 @@
 const mongoose = require('mongoose');
 
-const vehicleEntrySchema = new mongoose.Schema({
+const vehicleSchema = new mongoose.Schema({
     vehicleNumber: {
         type: String,
-        required: true
+        required: true,
+        uppercase: true
     },
     vehicleType: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'VehicleType',
+        required: true
+    },
+    checkpost: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Checkpost',
         required: true
     },
     driverName: {
@@ -24,32 +30,15 @@ const vehicleEntrySchema = new mongoose.Schema({
     },
     photoUrl: {
         type: String,
-        required: true
+        required: false
     },
-    checkpost: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Checkpost',
-        required: true
-    },
-    entryBy: {
+    createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
-    },
-    entryTime: {
-        type: Date,
-        default: Date.now
-    },
-    exitTime: {
-        type: Date
-    },
-    status: {
-        type: String,
-        enum: ['entered', 'exited'],
-        default: 'entered'
     }
 }, {
     timestamps: true
 });
 
-module.exports = mongoose.model('VehicleEntry', vehicleEntrySchema); 
+module.exports = mongoose.model('Vehicle', vehicleSchema); 

@@ -1,322 +1,260 @@
 import { useState, useEffect } from "react";
-import {
-  Box,
-  Card,
-  CardContent,
-  Grid,
-  Typography,
-  TextField,
-  Button,
-  MenuItem,
-  CircularProgress,
-} from "@mui/material";
-import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import { Download } from "@mui/icons-material";
-import { vehicleAPI, checkpostAPI, vehicleTypeAPI } from "../services/api";
+import { Assessment, FileDownload } from "@mui/icons-material";
+import { format } from "date-fns";
+import { PageHeader, Card, DateRangeFilter } from "../components/ui";
+import useStore from "../store/useStore";
+import { reportsAPI } from "../services/api/reportsAPI";
 import toast from "react-hot-toast";
-import * as XLSX from "xlsx";
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
 function Reports() {
+  const { user } = useStore();
+  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     startDate: null,
     endDate: null,
-    checkpost: "",
-    vehicleType: "",
-  });
-  const [loading, setLoading] = useState(true);
-  const [checkposts, setCheckposts] = useState([]);
-  const [vehicleTypes, setVehicleTypes] = useState([]);
-  const [reportData, setReportData] = useState({
-    entries: [],
-    checkpostStats: [],
-    vehicleTypeStats: [],
-    hourlyStats: [],
+    reportType: "",
+    format: "excel"
   });
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
+  const reportTypes = [
+    { value: "checkpost_entries", label: "Checkpost-wise Entries" },
+    { value: "daily_summary", label: "Daily Entry Summary" },
+    { value: "vehicle_type_analysis", label: "Vehicle Type Analysis" },
+    { value: "checkpost_summary", label: "Checkpost Summary" },
+    ...(["super_admin", "admin"].includes(user.role) ? [
+      { value: "checkpost_comparison", label: "Checkpost Comparison" }
+    ] : [])
+  ];
 
-  const fetchInitialData = async () => {
-    try {
-      const [checkpostsRes, typesRes] = await Promise.all([
-        checkpostAPI.getAll(),
-        vehicleTypeAPI.getAll(),
-      ]);
-      setCheckposts(checkpostsRes.data);
-      setVehicleTypes(typesRes.data);
-      await generateReport();
-    } catch (error) {
-      toast.error("Failed to fetch initial data");
-    } finally {
-      setLoading(false);
+  const exportFormats = [
+    { value: "excel", label: "Excel (.xlsx)" },
+    { value: "csv", label: "CSV" },
+    { value: "pdf", label: "PDF" }
+  ];
+
+  const getDateRange = (range) => {
+    const now = new Date();
+    switch (range) {
+      case 'today':
+        return { start: now, end: now };
+      case 'yesterday': {
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return { start: yesterday, end: yesterday };
+      }
+      case 'week': {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - 7);
+        return { start: weekStart, end: now };
+      }
+      case 'month': {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { start: monthStart, end: now };
+      }
+      case 'quarter': {
+        const quarterStart = new Date(now);
+        quarterStart.setMonth(quarterStart.getMonth() - 3);
+        return { start: quarterStart, end: now };
+      }
+      default:
+        return { start: now, end: now };
     }
   };
 
-  const generateReport = async () => {
-    setLoading(true);
+  const handleExport = async () => {
     try {
-      const { data } = await vehicleAPI.getEntries(filters);
-
-      // Process data for different charts
-      const checkpostStats = processCheckpostStats(data);
-      const vehicleTypeStats = processVehicleTypeStats(data);
-      const hourlyStats = processHourlyStats(data);
-
-      setReportData({
-        entries: data,
-        checkpostStats,
-        vehicleTypeStats,
-        hourlyStats,
+      setLoading(true);
+      const response = await reportsAPI.exportReport({
+        ...filters,
+        checkpost: user.role === "user" ? user.checkpost : filters.checkpost
       });
+
+      const url = window.URL.createObjectURL(response);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report-${filters.reportType}-${format(new Date(), "yyyy-MM-dd")}.${getFileExtension(filters.format)}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Report exported successfully");
     } catch (error) {
-      toast.error("Failed to generate report");
+      toast.error("Failed to export report");
     } finally {
       setLoading(false);
     }
   };
 
-  const processCheckpostStats = (data) => {
-    const stats = {};
-    data.forEach((entry) => {
-      const checkpostName = entry.checkpost.name;
-      stats[checkpostName] = (stats[checkpostName] || 0) + 1;
-    });
-    return Object.entries(stats).map(([name, value]) => ({ name, value }));
+  const getFileExtension = (format) => {
+    switch (format) {
+      case "excel": return "xlsx";
+      case "csv": return "csv";
+      case "pdf": return "pdf";
+      default: return "xlsx";
+    }
   };
 
-  const processVehicleTypeStats = (data) => {
-    const stats = {};
-    data.forEach((entry) => {
-      const typeName = entry.vehicleType.name;
-      stats[typeName] = (stats[typeName] || 0) + 1;
-    });
-    return Object.entries(stats).map(([name, value]) => ({ name, value }));
-  };
-
-  const processHourlyStats = (data) => {
-    const stats = new Array(24).fill(0);
-    data.forEach((entry) => {
-      const hour = new Date(entry.entryTime).getHours();
-      stats[hour]++;
-    });
-    return stats.map((value, hour) => ({
-      hour: `${hour}:00`,
-      entries: value,
-    }));
-  };
-
-  const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      reportData.entries.map((entry) => ({
-        "Vehicle Number": entry.vehicleNumber,
-        "Driver Name": entry.driverName,
-        "Driver Phone": entry.driverPhone,
-        "Vehicle Type": entry.vehicleType.name,
-        Checkpost: entry.checkpost.name,
-        "Entry Time": new Date(entry.entryTime).toLocaleString(),
-        "Exit Time": entry.exitTime
-          ? new Date(entry.exitTime).toLocaleString()
-          : "N/A",
-        Status: entry.status,
-        Purpose: entry.purpose,
-      }))
-    );
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicle Entries");
-    XLSX.writeFile(workbook, "vehicle-entries-report.xlsx");
-  };
-
-  if (loading) {
-    return <CircularProgress />;
-  }
+  const quickReports = [
+    {
+      label: "Today's Entries",
+      action: () => {
+        const { start, end } = getDateRange('today');
+        setFilters({ 
+          ...filters, 
+          startDate: start, 
+          endDate: end, 
+          reportType: "checkpost_entries" 
+        });
+      }
+    },
+    {
+      label: "This Week's Summary",
+      action: () => {
+        const { start, end } = getDateRange('week');
+        setFilters({ 
+          ...filters, 
+          startDate: start, 
+          endDate: end, 
+          reportType: "daily_summary" 
+        });
+      }
+    },
+    {
+      label: "Monthly Vehicle Types",
+      action: () => {
+        const { start, end } = getDateRange('month');
+        setFilters({ 
+          ...filters, 
+          startDate: start, 
+          endDate: end, 
+          reportType: "vehicle_type_analysis" 
+        });
+      }
+    }
+  ];
 
   return (
-    <Box>
-      <Typography variant="h5" component="h1" className="mb-6">
-        Reports & Analytics
-      </Typography>
+    <div className="space-y-6">
+      <PageHeader
+        title="Reports"
+        subtitle="Export and analyze data"
+        icon={<Assessment className="w-6 h-6" />}
+      />
 
-      <Card className="mb-6">
-        <CardContent>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={3}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Start Date"
-                  value={filters.startDate}
-                  onChange={(date) =>
-                    setFilters({ ...filters, startDate: date })
-                  }
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="End Date"
-                  value={filters.endDate}
-                  onChange={(date) => setFilters({ ...filters, endDate: date })}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <TextField
-                fullWidth
-                select
-                label="Checkpost"
-                value={filters.checkpost}
-                onChange={(e) =>
-                  setFilters({ ...filters, checkpost: e.target.value })
+      <Card>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <DateRangeFilter
+                startDate={filters.startDate}
+                endDate={filters.endDate}
+                onChange={(field, value) =>
+                  setFilters({ ...filters, [field]: value })
                 }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Report Type
+              </label>
+              <select
+                value={filters.reportType}
+                onChange={(e) => setFilters({ ...filters, reportType: e.target.value })}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
               >
-                <MenuItem value="">All</MenuItem>
-                {checkposts.map((cp) => (
-                  <MenuItem key={cp._id} value={cp._id}>
-                    {cp.name}
-                  </MenuItem>
+                <option value="">Select Report Type</option>
+                {reportTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
                 ))}
-              </TextField>
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <TextField
-                fullWidth
-                select
-                label="Vehicle Type"
-                value={filters.vehicleType}
-                onChange={(e) =>
-                  setFilters({ ...filters, vehicleType: e.target.value })
-                }
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Export Format
+              </label>
+              <select
+                value={filters.format}
+                onChange={(e) => setFilters({ ...filters, format: e.target.value })}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
               >
-                <MenuItem value="">All</MenuItem>
-                {vehicleTypes.map((type) => (
-                  <MenuItem key={type._id} value={type._id}>
-                    {type.name}
-                  </MenuItem>
+                {exportFormats.map((format) => (
+                  <option key={format.value} value={format.value}>
+                    {format.label}
+                  </option>
                 ))}
-              </TextField>
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <Box className="space-x-2">
-                <Button variant="contained" onClick={generateReport}>
-                  Generate
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<Download />}
-                  onClick={exportToExcel}
-                >
-                  Export
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              onClick={handleExport}
+              disabled={!filters.reportType || loading}
+              className={`flex items-center px-4 py-2 rounded-md text-white font-medium ${
+                !filters.reportType || loading
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
+            >
+              {loading ? (
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <FileDownload className="w-5 h-5 mr-2" />
+              )}
+              Export Report
+            </button>
+          </div>
+        </div>
       </Card>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Entries by Checkpost
-              </Typography>
-              <PieChart width={400} height={300}>
-                <Pie
-                  data={reportData.checkpostStats}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label
-                >
-                  {reportData.checkpostStats.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </CardContent>
-          </Card>
-        </Grid>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <div className="p-6">
+            <h3 className="text-lg font-medium text-gray-900">Today's Summary</h3>
+            <dl className="mt-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <dt className="text-sm text-gray-500">Total Entries</dt>
+                <dd className="text-sm font-medium text-gray-900">0</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-sm text-gray-500">Total Exits</dt>
+                <dd className="text-sm font-medium text-gray-900">0</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-sm text-gray-500">Active Vehicles</dt>
+                <dd className="text-sm font-medium text-gray-900">0</dd>
+              </div>
+            </dl>
+          </div>
+        </Card>
 
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Vehicle Type Distribution
-              </Typography>
-              <PieChart width={400} height={300}>
-                <Pie
-                  data={reportData.vehicleTypeStats}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label
+        {/* Quick Actions Card */}
+        <Card>
+          <div className="p-6">
+            <h3 className="text-lg font-medium text-gray-900">Quick Reports</h3>
+            <div className="mt-5 space-y-3">
+              {quickReports.map((report) => (
+                <button
+                  key={report.label}
+                  onClick={report.action}
+                  className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                 >
-                  {reportData.vehicleTypeStats.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Hourly Entry Distribution
-              </Typography>
-              <BarChart
-                width={800}
-                height={300}
-                data={reportData.hourlyStats}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="hour" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="entries" fill="#8884d8" />
-              </BarChart>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
+                  {report.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
   );
 }
 

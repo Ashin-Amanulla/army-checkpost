@@ -1,14 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-} from "@mui/material";
+import { TextField, Button, Alert } from "@mui/material";
 import useStore from "../store/useStore";
 import toast from "react-hot-toast";
 
@@ -32,55 +24,79 @@ function Login() {
   };
 
   return (
-    <Box className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-full max-w-md">
-        <CardContent className="space-y-6">
-          <Typography variant="h5" component="h1" className="text-center">
-            Army Checkpost System
-          </Typography>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-900 to-green-800">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-2xl">
+        {/* Indian Army Logo */}
+        <div className="flex justify-center">
+          <img
+            src="/indian-army-logo.png"
+            alt="Indian Army Logo"
+            className="w-24 h-24"
+          />
+        </div>
 
-          {error && <Alert severity="error">{error}</Alert>}
+        <h1 className="text-2xl font-bold text-center text-gray-800">
+          Indian Army Checkpost System
+        </h1>
+        <p className="text-center text-gray-600">Vehicle Entry Management</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <TextField
-              fullWidth
-              label="Username"
-              value={credentials.username}
-              onChange={(e) =>
-                setCredentials({
-                  ...credentials,
-                  username: e.target.value,
-                })
-              }
-              required
-            />
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 text-red-700">
+            {error}
+          </div>
+        )}
 
-            <TextField
-              fullWidth
-              type="password"
-              label="Password"
-              value={credentials.password}
-              onChange={(e) =>
-                setCredentials({
-                  ...credentials,
-                  password: e.target.value,
-                })
-              }
-              required
-            />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Username
+              </label>
+              <input
+                type="text"
+                value={credentials.username}
+                onChange={(e) =>
+                  setCredentials({
+                    ...credentials,
+                    username: e.target.value,
+                  })
+                }
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                required
+              />
+            </div>
 
-            <Button
-              fullWidth
-              variant="contained"
-              type="submit"
-              disabled={isLoading}
-            >
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </Box>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                type="password"
+                value={credentials.password}
+                onChange={(e) =>
+                  setCredentials({
+                    ...credentials,
+                    password: e.target.value,
+                  })
+                }
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                required
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-800 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+          >
+            {isLoading ? "Authenticating..." : "Login"}
+          </button>
+        </form>
+
+        <div className="text-center text-sm text-gray-600">Jai Hind 🇮🇳</div>
+      </div>
+    </div>
   );
 }
 

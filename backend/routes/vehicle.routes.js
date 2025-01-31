@@ -2,87 +2,56 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
-const {
-    createEntry,
-    updateExit,
-    getEntries,
-    getVehicleHistory,
-    getEntryById
-} = require('../controllers/vehicle.controller');
+const vehicleController = require('../controllers/vehicle.controller');
+const { createAuditLog } = require('../controllers/auditLogController');
+const { validateVehicleEntry } = require('../middleware/validateVehicle');
 
-/**
- * @swagger
- * /vehicles:
- *   post:
- *     summary: Create new vehicle entry
- *     tags: [Vehicles]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required:
- *               - vehicleNumber
- *               - vehicleType
- *               - driverName
- *               - driverPhone
- *               - purpose
- *               - photo
- *             properties:
- *               vehicleNumber:
- *                 type: string
- *               vehicleType:
- *                 type: string
- *               driverName:
- *                 type: string
- *               driverPhone:
- *                 type: string
- *               purpose:
- *                 type: string
- *               photo:
- *                 type: string
- *                 format: binary
- *     responses:
- *       201:
- *         description: Vehicle entry created successfully
- *
- *   get:
- *     summary: Get vehicle entries
- *     tags: [Vehicles]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: startDate
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: endDate
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: vehicleType
- *         schema:
- *           type: string
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [entered, exited]
- *     responses:
- *       200:
- *         description: List of vehicle entries
- */
+const wrapWithAudit = (handler, action) => {
+    return async (req, res) => {
+        try {
+            const result = await handler(req, res);
+            await createAuditLog(
+                req,
+                action,
+                'VEHICLE',
+                `${action}: Vehicle ${req.params.id || 'new'}`,
+                {
+                    vehicleId: req.params.id,
+                    vehicleNumber: req.body.vehicleNumber,
+                    checkpost: req.user.checkpost
+                }
+            );
+            return result;
+        } catch (error) {
+            res.status(500).json({ message: error.message });
+        }
+    };
+};
 
-router.post('/', protect, authorize('user'), upload.single('photo'), createEntry);
-router.put('/:id/exit', protect, authorize('user'), updateExit);
-router.get('/', protect, getEntries);
-router.get('/history/:vehicleNumber', protect, getVehicleHistory);
-router.get('/:id', protect, getEntryById);
+router.use(protect);
+
+router.post('/',
+    authorize(['user', 'admin', 'super_admin']),
+    upload.single('photo'),
+    validateVehicleEntry,
+    wrapWithAudit(vehicleController.createEntry, 'VEHICLE_ENTRY')
+);
+
+router.put('/:id/exit',
+    authorize('user'),
+    wrapWithAudit(vehicleController.updateExit, 'VEHICLE_EXIT')
+);
+
+router.get('/',
+    wrapWithAudit(vehicleController.getEntries, 'VIEW_VEHICLES')
+);
+
+router.get('/history/:vehicleNumber',
+    wrapWithAudit(vehicleController.getVehicleHistory, 'VIEW_VEHICLES')
+);
+
+router.get('/:id',
+    wrapWithAudit(vehicleController.getEntryById, 'VIEW_VEHICLES')
+);
 
 module.exports = router; 

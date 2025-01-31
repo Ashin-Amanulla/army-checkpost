@@ -1,91 +1,55 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getProfile } = require('../controllers/auth.controller');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
+const authController = require('../controllers/auth.controller');
+const { validateRegister, validateLogin } = require('../middleware/validateAuth');
+const { createAuditLog } = require('../controllers/auditLogController');
 
-/**
- * @swagger
- * /auth/login:
- *   post:
- *     summary: Login user
- *     tags: [Authentication]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - username
- *               - password
- *             properties:
- *               username:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: Login successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 _id:
- *                   type: string
- *                 username:
- *                   type: string
- *                 fullName:
- *                   type: string
- *                 role:
- *                   type: string
- *                 token:
- *                   type: string
- *       401:
- *         description: Invalid credentials
- */
+// Wrap controller functions to include audit logging
+const wrapWithAudit = (handler, action, module) => {
+    return async (req, res) => {
+        try {
+            const result = await handler(req, res);
+            await createAuditLog(
+                req,
+                action,
+                module,
+                `${action}: ${req.method} ${req.originalUrl}`,
+                { userId: req.user?._id, ...req.body }
+            );
+            return result;
+        } catch (error) {
+            res.status(500).json({ message: error.message });
+        }
+    };
+};
 
-/**
- * @swagger
- * /auth/register:
- *   post:
- *     summary: Register new user
- *     tags: [Authentication]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - username
- *               - password
- *               - fullName
- *               - role
- *             properties:
- *               username:
- *                 type: string
- *               password:
- *                 type: string
- *               fullName:
- *                 type: string
- *               role:
- *                 type: string
- *                 enum: [super_admin, admin, user]
- *               checkpost:
- *                 type: string
- *                 description: Checkpost ID (required for user role)
- *     responses:
- *       201:
- *         description: User created successfully
- *       400:
- *         description: Invalid input
- */
+// Public routes
+router.post('/register',
+    validateRegister,
+    wrapWithAudit(authController.register, 'USER_REGISTER', 'AUTH')
+);
 
-router.post('/register', register);
-router.post('/login', login);
-router.get('/profile', protect, getProfile);
+router.post('/login',
+    validateLogin,
+    wrapWithAudit(authController.login, 'USER_LOGIN', 'AUTH')
+);
+
+// Protected routes
+router.use(protect);
+
+router.get('/me',
+    wrapWithAudit(authController.getMe, 'VIEW_PROFILE', 'USER')
+);
+
+router.put('/profile',
+    wrapWithAudit(authController.updateProfile, 'UPDATE_PROFILE', 'USER')
+);
+
+// Admin only routes
+router.get('/users',
+    authorize(['admin', 'super_admin']),
+    wrapWithAudit(authController.getUsers, 'VIEW_USERS', 'USER')
+);
 
 module.exports = router; 
