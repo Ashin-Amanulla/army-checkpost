@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { vehicleAPI, vehicleTypeAPI, checkpostAPI } from "../services/api";
+import { DirectionsCar } from "@mui/icons-material";
+import { vehicleAPI, checkpostAPI } from "../services/api";
 import { PhotoCamera } from "@mui/icons-material";
 import toast from "react-hot-toast";
 import useStore from "../store/useStore";
 
 function VehicleEntry() {
   const { user } = useStore();
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     vehicleNumber: "",
     vehicleType: "",
@@ -17,31 +19,50 @@ function VehicleEntry() {
   });
   const [checkposts, setCheckposts] = useState([]);
   const [vehicleTypes, setVehicleTypes] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
 
   useEffect(() => {
-    fetchVehicleTypes();
-    if (user.role !== "user") {
-      fetchCheckposts();
-    }
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([
+          fetchVehicleTypes(),
+          user.role !== "user" ? fetchCheckposts() : Promise.resolve(),
+        ]);
+      } catch (error) {
+        console.error("Error fetching initial data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, [user.role]);
 
   const fetchVehicleTypes = async () => {
     try {
-      const response = await vehicleTypeAPI.getAll();
-      setVehicleTypes(response.data);
+      const response = await vehicleAPI.types.getAll();
+      if (response) {
+        setVehicleTypes(response);
+      }
     } catch (error) {
-      toast.error("Failed to fetch vehicle types");
+      console.error("Error fetching vehicle types:", error);
+      toast.error("Failed to load vehicle types");
+      setVehicleTypes([]);
     }
   };
 
   const fetchCheckposts = async () => {
     try {
       const response = await checkpostAPI.getAll();
-      setCheckposts(response.data);
+      if (response) {
+        setCheckposts(response);
+      } else {
+        setCheckposts([]);
+      }
     } catch (error) {
+      console.error("Error fetching checkposts:", error);
       toast.error("Failed to fetch checkposts");
+      setCheckposts([]);
     }
   };
 
@@ -105,7 +126,7 @@ function VehicleEntry() {
         );
       }
 
-      const response = await vehicleAPI.createEntry(formDataToSend);
+      const response = await vehicleAPI.entries.createEntry(formDataToSend);
       console.log("Server response:", response);
 
       toast.success("Vehicle entry created successfully");
@@ -130,236 +151,244 @@ function VehicleEntry() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-green-800 to-green-900 text-white px-8 py-6">
-          <h2 className="text-xl font-semibold">New Vehicle Entry</h2>
-          <p className="text-sm text-green-100 mt-2 opacity-90">
-            Enter vehicle and driver information for checkpoint entry
-          </p>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-900"></div>
         </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-green-800 to-green-900 text-white px-8 py-6">
+            <h2 className="text-xl font-semibold">New Vehicle Entry</h2>
+            <p className="text-sm text-green-100 mt-2 opacity-90">
+              Enter vehicle and driver information for checkpoint entry
+            </p>
+          </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
-          {/* Vehicle Details Section */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
-              Vehicle Information
-            </h3>
+          <form onSubmit={handleSubmit} className="p-8 space-y-8">
+            {/* Vehicle Details Section */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+                Vehicle Information
+              </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Vehicle Number *
-                </label>
-                <input
-                  type="text"
-                  value={formData.vehicleNumber}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      vehicleNumber: e.target.value.toUpperCase(),
-                    })
-                  }
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
-                  placeholder="Enter vehicle number"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Vehicle Type *
-                </label>
-                <select
-                  value={formData.vehicleType}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      vehicleType: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-gray-600"
-                  required
-                >
-                  <option value="">Select vehicle type</option>
-                  {vehicleTypes.map((type) => (
-                    <option key={type._id} value={type._id}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {user.role !== "user" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Checkpost *
+                    Vehicle Number *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.vehicleNumber}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        vehicleNumber: e.target.value.toUpperCase(),
+                      })
+                    }
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
+                    placeholder="Enter vehicle number"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vehicle Type *
                   </label>
                   <select
-                    value={formData.checkpost}
+                    value={formData.vehicleType}
                     onChange={(e) =>
-                      setFormData({ ...formData, checkpost: e.target.value })
+                      setFormData({
+                        ...formData,
+                        vehicleType: e.target.value,
+                      })
                     }
                     className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-gray-600"
                     required
                   >
-                    <option value="">Select checkpoint location</option>
-                    {checkposts.map((checkpost) => (
-                      <option key={checkpost._id} value={checkpost._id}>
-                        {checkpost.name} ({checkpost.code})
-                      </option>
-                    ))}
+                    <option value="">Select vehicle type</option>
+                    {Array.isArray(vehicleTypes) &&
+                      vehicleTypes.map((type) => (
+                        <option key={type._id} value={type._id}>
+                          {type.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Driver Details Section */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
-              Driver Information
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Driver Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.driverName}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      driverName: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
-                  placeholder="Enter driver's full name"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Driver Phone *
-                </label>
-                <input
-                  type="tel"
-                  value={formData.driverPhone}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      driverPhone: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
-                  placeholder="Enter contact number"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Purpose & Photo Section */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
-              Additional Details
-            </h3>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Purpose of Visit *
-              </label>
-              <textarea
-                value={formData.purpose}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    purpose: e.target.value,
-                  })
-                }
-                rows={3}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
-                placeholder="Enter purpose of visit"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Vehicle Photo *
-              </label>
-              <div className="mt-2 flex flex-col items-center justify-center px-6 py-8 border-2 border-gray-300 border-dashed rounded-lg hover:border-green-500 transition-colors duration-200">
-                {photoPreview ? (
-                  <div className="space-y-2">
-                    <img
-                      src={photoPreview}
-                      alt="Preview"
-                      className="max-h-48 rounded-lg shadow-md"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPhotoPreview(null);
-                        setFormData({ ...formData, photo: null });
-                      }}
-                      className="text-sm text-red-600 hover:text-red-800 font-medium"
+                {user.role !== "user" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Checkpost *
+                    </label>
+                    <select
+                      value={formData.checkpost}
+                      onChange={(e) =>
+                        setFormData({ ...formData, checkpost: e.target.value })
+                      }
+                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-gray-600"
+                      required
                     >
-                      Remove photo
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-1 text-center">
-                    <PhotoCamera className="mx-auto h-12 w-12 text-gray-400 group-hover:text-green-500" />
-                    <div className="flex text-sm text-gray-600">
-                      <label className="relative cursor-pointer rounded-md font-medium text-green-600 hover:text-green-500">
-                        <span>Upload a photo</span>
-                        <input
-                          type="file"
-                          className="sr-only"
-                          accept="image/*"
-                          onChange={handlePhotoChange}
-                          required={!formData.photo}
-                        />
-                      </label>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Click or drag and drop to upload
-                    </p>
+                      <option value="">Select checkpoint location</option>
+                      {Array.isArray(checkposts) &&
+                        checkposts.map((checkpost) => (
+                          <option key={checkpost._id} value={checkpost._id}>
+                            {checkpost.name} ({checkpost.code})
+                          </option>
+                        ))}
+                    </select>
                   </div>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end space-x-4 border-t pt-6">
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              Reset Form
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-8 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            >
-              {loading ? (
-                <span className="flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Creating...</span>
-                </span>
-              ) : (
-                "Create Entry"
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+            {/* Driver Details Section */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+                Driver Information
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Driver Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.driverName}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        driverName: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
+                    placeholder="Enter driver's full name"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Driver Phone *
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.driverPhone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        driverPhone: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
+                    placeholder="Enter contact number"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Purpose & Photo Section */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+                Additional Details
+              </h3>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Purpose of Visit *
+                </label>
+                <textarea
+                  value={formData.purpose}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      purpose: e.target.value,
+                    })
+                  }
+                  rows={3}
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
+                  placeholder="Enter purpose of visit"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Vehicle Photo *
+                </label>
+                <div className="mt-2 flex flex-col items-center justify-center px-6 py-8 border-2 border-gray-300 border-dashed rounded-lg hover:border-green-500 transition-colors duration-200">
+                  {photoPreview ? (
+                    <div className="space-y-2">
+                      <img
+                        src={photoPreview}
+                        alt="Preview"
+                        className="max-h-48 rounded-lg shadow-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhotoPreview(null);
+                          setFormData({ ...formData, photo: null });
+                        }}
+                        className="text-sm text-red-600 hover:text-red-800 font-medium"
+                      >
+                        Remove photo
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1 text-center">
+                      <PhotoCamera className="mx-auto h-12 w-12 text-gray-400 group-hover:text-green-500" />
+                      <div className="flex text-sm text-gray-600">
+                        <label className="relative cursor-pointer rounded-md font-medium text-green-600 hover:text-green-500">
+                          <span>Upload a photo</span>
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                            required={!formData.photo}
+                          />
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Click or drag and drop to upload
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end space-x-4 border-t pt-6">
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                Reset Form
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-8 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {loading ? (
+                  <span className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Creating...</span>
+                  </span>
+                ) : (
+                  "Create Entry"
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

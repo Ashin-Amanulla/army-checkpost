@@ -3,7 +3,7 @@ import { Assessment, FileDownload } from "@mui/icons-material";
 import { format } from "date-fns";
 import { PageHeader, Card, DateRangeFilter } from "../components/ui";
 import useStore from "../store/useStore";
-import { reportsAPI } from "../services/api/reportsAPI";
+import { reportsAPI } from "../services/api";
 import toast from "react-hot-toast";
 
 function Reports() {
@@ -132,6 +132,24 @@ function Reports() {
       }
     }
   ];
+
+  const handleGenerateReport = async () => {
+    try {
+      const response = await reportsAPI.generateReport(filters);
+      // ... handle response
+    } catch (error) {
+      console.error("Error generating report:", error);
+    }
+  };
+
+  const handleDownloadReport = async (reportId) => {
+    try {
+      const blob = await reportsAPI.downloadReport(reportId);
+      // ... handle download
+    } catch (error) {
+      console.error("Error downloading report:", error);
+    }
+  };
 
   return (
     <div className="space-y-6">

@@ -15,7 +15,7 @@ import {
   Select,
   LoadingSpinner,
 } from "../components/ui";
-import { auditAPI } from "../services/api/auditAPI";
+import { auditAPI } from "../services/api";
 import toast from "react-hot-toast";
 
 function AuditLog() {
@@ -160,16 +160,19 @@ function AuditLog() {
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [filters]);
 
   const fetchLogs = async () => {
     try {
       setLoading(true);
       const response = await auditAPI.getLogs(filters);
-      setLogs(response.data.data || []);
+      console.log(response.data);
+      
+      if (response) {
+        setLogs(response.data);
+      }
     } catch (error) {
-      toast.error("Failed to fetch audit logs");
-      setLogs([]);
+      console.error("Error fetching audit logs:", error);
     } finally {
       setLoading(false);
     }
@@ -227,7 +230,8 @@ function AuditLog() {
 
   const handleExport = async () => {
     try {
-      const blob = await auditAPI.exportLogs(filters);
+      const response = await auditAPI.exportLogs(filters);
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -243,8 +247,8 @@ function AuditLog() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Audit Log"
-        subtitle="Track all system activities and changes"
+        title="Audit Logs"
+        subtitle="Track system activities"
         icon={<HistoryIcon className="w-6 h-6" />}
         actions={
           <div className="flex gap-2">

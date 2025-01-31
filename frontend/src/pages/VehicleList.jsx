@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Card,
@@ -32,8 +33,10 @@ import {
   ViewList,
   FilterList,
   DirectionsCar,
+  Edit,
+  Delete,
 } from "@mui/icons-material";
-import { vehicleAPI, vehicleTypeAPI } from "../services/api";
+import { vehicleAPI, checkpostAPI } from "../services/api";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import toast from "react-hot-toast";
@@ -80,34 +83,26 @@ function VehicleList() {
 
   const fetchVehicleTypes = async () => {
     try {
-      const { data } = await vehicleTypeAPI.getAll();
-      setVehicleTypes(data);
+      const response = await vehicleAPI.types.getAll();
+      if (response.success) {
+        setVehicleTypes(response.data);
+      }
     } catch (error) {
-      toast.error("Failed to fetch vehicle types");
+      console.error("Error fetching vehicle types:", error);
+      toast.error("Failed to load vehicle types");
     }
   };
 
   const fetchVehicles = async () => {
     setLoading(true);
     try {
-      const params = {
-        ...filters,
-        page: page + 1,
-        limit: rowsPerPage,
-        startDate: filters.startDate?.toISOString(),
-        endDate: filters.endDate?.toISOString(),
-      };
-      const { data } = await vehicleAPI.getEntries(params);
-      if (data.success && Array.isArray(data.data)) {
-        setVehicles(data.data);
-      } else {
-        console.error('Unexpected data format:', data);
-        setVehicles([]);
+      const response = await vehicleAPI.entries.getEntries(filters);
+      if (response.success) {
+        setVehicles(response.data);
       }
     } catch (error) {
-      console.error('Error fetching vehicles:', error);
+      console.error("Error fetching vehicles:", error);
       toast.error("Failed to fetch vehicles");
-      setVehicles([]);
     } finally {
       setLoading(false);
     }
@@ -118,13 +113,31 @@ function VehicleList() {
     fetchVehicles();
   };
 
-  const handleExitVehicle = async (id) => {
+  const handleExit = async (id) => {
     try {
-      await vehicleAPI.updateExit(id);
-      toast.success("Vehicle exit recorded");
-      fetchVehicles();
+      const response = await vehicleAPI.entries.updateEntry(id, { status: 'exited' });
+      if (response.success) {
+        toast.success("Vehicle exit recorded successfully");
+        fetchVehicles();
+      }
     } catch (error) {
-      toast.error("Failed to record vehicle exit");
+      console.error("Error recording exit:", error);
+      toast.error("Failed to record exit");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this entry?")) {
+      try {
+        const response = await vehicleAPI.entries.deleteEntry(id);
+        if (response.success) {
+          toast.success("Entry deleted successfully");
+          fetchVehicles();
+        }
+      } catch (error) {
+        console.error("Error deleting entry:", error);
+        toast.error("Failed to delete entry");
+      }
     }
   };
 
@@ -261,7 +274,7 @@ function VehicleList() {
                 onView={() => handleViewDetails(vehicle._id)}
                 onExit={
                   vehicle.status === "entered"
-                    ? () => handleExitVehicle(vehicle._id)
+                    ? () => handleExit(vehicle._id)
                     : undefined
                 }
               />

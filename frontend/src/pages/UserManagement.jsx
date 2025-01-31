@@ -49,6 +49,7 @@ import UserForm from "../components/UserForm";
 
 function UserManagement() {
   const { theme } = useTheme();
+  const { user: currentUser } = useStore();
   const [users, setUsers] = useState([]);
   const [checkposts, setCheckposts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +72,6 @@ function UserManagement() {
     checkpost: "",
     active: true,
   });
-  const { user: currentUser } = useStore();
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
@@ -86,8 +86,8 @@ function UserManagement() {
         checkpostAPI.getAll(),
       ]);
       console.log(usersRes);
-      if (usersRes && usersRes.data.success && Array.isArray(usersRes.data.data)) {
-        setUsers(usersRes.data.data);
+      if (usersRes.success  && Array.isArray(usersRes.data)) {
+        setUsers(usersRes.data);
       } else {
         console.error("Unexpected data format:", usersRes);
         setUsers([]);

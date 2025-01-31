@@ -1,28 +1,38 @@
 import { useEffect, useState } from "react";
-import { vehicleAPI } from "../services/api";
-import { DirectionsCar, ExitToApp, Today } from "@mui/icons-material";
+import { dashboardAPI } from "../services/api";
+import { 
+  DirectionsCar, 
+  ExitToApp, 
+  Today, 
+  Assessment,
+  ListAlt,
+  History,
+  TrendingUp
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { Card } from "../components/ui";
 
 function Dashboard() {
   const [stats, setStats] = useState({
     totalEntries: 0,
     activeVehicles: 0,
     todayEntries: 0,
+    recentEntries: [],
+    weeklyTotal: 0,
+    monthlyTotal: 0
   });
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { data } = await vehicleAPI.getEntries({
-          startDate: new Date().toISOString().split("T")[0],
-        });
-
-        setStats({
-          totalEntries: data.length,
-          activeVehicles: data.filter((entry) => entry.status === "entered")
-            .length,
-          todayEntries: data.length,
-        });
+        const { data } = await dashboardAPI.getStats();
+        console.log(data);
+        if (data) {
+          setStats(data);
+        }
       } catch (error) {
         console.error("Error fetching stats:", error);
       } finally {
@@ -113,7 +123,109 @@ function Dashboard() {
             <DirectionsCar className="w-6 h-6 text-green-600 mx-auto" />
             <span className="block mt-2 text-sm text-gray-600">New Entry</span>
           </button>
-          {/* Add more quick actions as needed */}
+          <button
+            onClick={() => navigate('/vehicle-list')}
+            className="p-4 text-center rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+          >
+            <ListAlt className="w-6 h-6 text-blue-600 mx-auto" />
+            <span className="block mt-2 text-sm text-gray-600">View Entries</span>
+          </button>
+          <button
+            onClick={() => navigate('/reports')}
+            className="p-4 text-center rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors"
+          >
+            <Assessment className="w-6 h-6 text-amber-600 mx-auto" />
+            <span className="block mt-2 text-sm text-gray-600">Reports</span>
+          </button>
+          <button
+            onClick={() => navigate('/audit-logs')}
+            className="p-4 text-center rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors"
+          >
+            <History className="w-6 h-6 text-purple-600 mx-auto" />
+            <span className="block mt-2 text-sm text-gray-600">Audit Logs</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Weekly/Monthly Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Weekly Overview</h3>
+            <TrendingUp className="w-5 h-5 text-green-600" />
+          </div>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Entries</span>
+              <span className="text-lg font-medium">{stats.weeklyTotal}</span>
+            </div>
+            {/* Add more weekly stats */}
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Monthly Overview</h3>
+            <TrendingUp className="w-5 h-5 text-blue-600" />
+          </div>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Entries</span>
+              <span className="text-lg font-medium">{stats.monthlyTotal}</span>
+            </div>
+            {/* Add more monthly stats */}
+          </div>
+        </Card>
+      </div>
+
+      {/* Recent Entries */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Recent Entries</h2>
+          <button
+            onClick={() => navigate('/vehicle-list')}
+            className="text-sm text-green-600 hover:text-green-700"
+          >
+            View All
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Vehicle Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Checkpost
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Time
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {stats.recentEntries.map((entry) => (
+                <tr key={entry._id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {entry.vehicleNumber}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {entry.vehicleType?.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {entry.checkpost?.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {format(new Date(entry.createdAt), 'dd/MM/yyyy HH:mm')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

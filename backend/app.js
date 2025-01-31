@@ -16,6 +16,7 @@ const checkpostRoutes = require('./routes/checkpost.routes');
 const vehicleTypeRoutes = require('./routes/vehicleType.routes');
 const auditLogRoutes = require('./routes/auditLog.routes');
 const reportRoutes = require('./routes/report.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/checkposts', checkpostRoutes);
 app.use('/api/vehicletypes', vehicleTypeRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -1,6 +1,14 @@
 import { useState, useEffect } from "react";
-import { Add, Edit, Delete, LocationOn } from "@mui/icons-material";
+import { Edit,Delete,Business } from "@mui/icons-material";
 import { checkpostAPI } from "../services/api";
+import {
+  PageHeader,
+  Card,
+  Button,
+  DataTable,
+  Modal,
+  LoadingSpinner,
+} from "../components/ui";
 import toast from "react-hot-toast";
 
 function CheckpostManagement() {
@@ -21,9 +29,14 @@ function CheckpostManagement() {
 
   const fetchCheckposts = async () => {
     try {
-      const { data } = await checkpostAPI.getAll();
-      setCheckposts(data);
+      setLoading(true);
+      const response = await checkpostAPI.getAll();
+      if (response) {
+       
+        setCheckposts(response);
+      }
     } catch (error) {
+      console.error("Error fetching checkposts:", error);
       toast.error("Failed to fetch checkposts");
     } finally {
       setLoading(false);
@@ -81,7 +94,7 @@ function CheckpostManagement() {
           }}
           className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
         >
-          <Add className="w-5 h-5 mr-2" />
+          <Business className="w-5 h-5 mr-2" />
           Add Checkpost
         </button>
       </div>
@@ -99,7 +112,7 @@ function CheckpostManagement() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-green-50 rounded-full">
-                      <LocationOn className="w-6 h-6 text-green-600" />
+                      <Business className="w-6 h-6 text-green-600" />
                     </div>
                     <div>
                       <h3 className="text-lg font-medium text-gray-900">

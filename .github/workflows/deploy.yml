@@ -1,177 +1,63 @@
-name: Deploy to AWS Lightsail
+name: MERN Stack CI/CD
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
-      # Build Frontend
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "20"
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
 
-      # Cache frontend dependencies
-      - name: Cache Frontend Dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            frontend/node_modules
-          key: ${{ runner.os }}-frontend-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-frontend-
+    # Frontend build
+    - name: Install Frontend Dependencies
+      run: |
+        cd frontend
+        npm install
 
-      # Cache backend dependencies
-      - name: Cache Backend Dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            backend/node_modules
-          key: ${{ runner.os }}-backend-${{ hashFiles('backend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-backend-
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm run build
 
-      - name: Install & Build Frontend
-        run: |
+    - name: Run Frontend Tests
+      run: |
+        cd frontend
+        npm test || true
+
+    # Backend build
+    - name: Install Backend Dependencies
+      run: |
+        cd backend
+        npm install
+
+    - name: Run Backend Tests
+      run: |
+        cd backend
+        npm test || true
+
+    # Deploy to Lightsail
+    - name: Deploy to AWS Lightsail
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ubuntu  # Lightsail Ubuntu instances use 'ubuntu' as username
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /home/ubuntu/your-app
+          git pull origin main
           cd frontend
           npm install
           npm run build
-
-      - name: Install Backend Dependencies
-        run: |
-          cd backend
+          cd ../backend
           npm install
-
-      # Deploy to Lightsail
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          # Add newlines if they're missing
-          echo -e "${{ secrets.LIGHTSAIL_SSH_KEY }}" > lightsail_key.pem
-          chmod 600 lightsail_key.pem
-          # Debug SSH connection (remove in production)
-          ssh-keygen -y -f lightsail_key.pem
-
-      - name: Deploy to Lightsail
-        run: |
-          # Set instance IP
-          instance_ip="${{ secrets.LIGHTSAIL_IP }}"
-
-          # Debug IP
-          echo "Connecting to instance: ${instance_ip}"
-          if [ -z "${instance_ip}" ]; then
-            echo "Error: Instance IP is empty"
-            exit 1
-          fi
-
-          # Debug information
-          echo "Testing SSH connection..."
-          ssh -v -o StrictHostKeyChecking=no \
-              -i lightsail_key.pem \
-              ubuntu@${instance_ip} "whoami"
-
-          # Create deployment directory structure
-          mkdir -p deploy/frontend deploy/backend
-
-          # Copy frontend build
-          cp -r frontend/dist/* deploy/frontend/
-
-          # Copy backend files (excluding node_modules and other unnecessary files)
-          cp backend/package*.json deploy/backend/
-          cp -r backend/controllers backend/models backend/middleware backend/routes backend/utils deploy/backend/
-          cp backend/server.js deploy/backend/
-          cp backend/swagger.js deploy/backend/
-          cp backend/.env.example deploy/backend/
-
-          # Create deploy script
-          cat > deploy/deploy.sh << 'EOF'
-          #!/bin/bash
-
-          # Create necessary directories
-          mkdir -p /home/ubuntu/apps/{frontend,backend}
-
-          # Stop PM2 processes
-          pm2 stop all || true
-
-          # Deploy frontend
-          rm -rf /home/ubuntu/apps/frontend/*
-          cp -r /home/ubuntu/apps/deploy/frontend/* /home/ubuntu/apps/frontend/
-
-          # Deploy backend
-          cd /home/ubuntu/apps/backend
-
-          # Backup .env if it exists
-          if [ -f .env ]; then
-            cp .env .env.backup
-          fi
-
-          # Remove old files but keep node_modules and .env
-          find . -mindepth 1 -maxdepth 1 ! -name 'node_modules' ! -name '.env' ! -name '.env.backup' -exec rm -rf {} +
-
-          # Copy new files
-          cp -r /home/ubuntu/apps/deploy/backend/* .
-
-          # Restore .env
-          if [ -f .env.backup ]; then
-            mv .env.backup .env
-          fi
-
-          # Install any new dependencies
-          npm install --omit=dev
-
-          # Restart PM2
-          if ! pm2 list | grep -q "online\|stopped"; then
-            cd /home/ubuntu/apps/backend
-            pm2 start server.js
-          else
-            pm2 restart all --update-env
-          fi
-          EOF
-
-          chmod +x deploy/deploy.sh
-
-          # Create remote directory structure
-          ssh -o StrictHostKeyChecking=no \
-              -i lightsail_key.pem \
-              ubuntu@${instance_ip} \
-              "mkdir -p /home/ubuntu/apps/{frontend,backend,deploy}"
-
-          # Ensure correct permissions
-          ssh -o StrictHostKeyChecking=no \
-              -i lightsail_key.pem \
-              ubuntu@${instance_ip} \
-              "sudo chown -R ubuntu:ubuntu /home/ubuntu/apps"
-
-          # Copy deployment files
-          scp -o StrictHostKeyChecking=no \
-              -i lightsail_key.pem \
-              -r deploy/* \
-              ubuntu@${instance_ip}:/home/ubuntu/apps/deploy/
-
-          # Install Node.js and PM2 if not already installed
-          ssh -o StrictHostKeyChecking=no \
-              -i lightsail_key.pem \
-              ubuntu@${instance_ip} \
-              "which node || curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs && sudo npm install -g pm2"
-
-          # Execute deployment
-          ssh -o StrictHostKeyChecking=no \
-              -i lightsail_key.pem \
-              ubuntu@${instance_ip} \
-              "cd /home/ubuntu/apps && bash deploy/deploy.sh"
-
-      - name: Cleanup
-        run: rm -rf deploy lightsail_key.pem
+          pm2 restart all

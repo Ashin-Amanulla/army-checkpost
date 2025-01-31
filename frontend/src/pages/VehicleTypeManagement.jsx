@@ -1,6 +1,21 @@
 import { useState, useEffect } from "react";
-import { Add, Edit, Delete, DirectionsCar, GridView, ViewList } from "@mui/icons-material";
-import { vehicleTypeAPI } from "../services/api";
+import {
+  DirectionsCar,
+  Add,
+  Edit,
+  Delete,
+  ViewList,
+  GridView,
+} from "@mui/icons-material";
+import { vehicleAPI } from "../services/api";
+import {
+  PageHeader,
+  Card,
+  Button,
+  DataTable,
+  Modal,
+  LoadingSpinner,
+} from "../components/ui";
 import toast from "react-hot-toast";
 
 function VehicleTypeManagement() {
@@ -22,9 +37,16 @@ function VehicleTypeManagement() {
 
   const fetchVehicleTypes = async () => {
     try {
-      const { data } = await vehicleTypeAPI.getAll();
-      setVehicleTypes(data);
+      setLoading(true);
+      
+      const response = await vehicleAPI.types.getAll();
+      console.log(response);
+
+      if (response) {
+        setVehicleTypes(response);
+      }
     } catch (error) {
+      console.error("Error fetching vehicle types:", error);
       toast.error("Failed to fetch vehicle types");
     } finally {
       setLoading(false);
@@ -35,26 +57,28 @@ function VehicleTypeManagement() {
     e.preventDefault();
     try {
       if (editMode) {
-        await vehicleTypeAPI.update(selectedType._id, formData);
+        await vehicleAPI.types.update(selectedType._id, formData);
         toast.success("Vehicle type updated successfully");
       } else {
-        await vehicleTypeAPI.create(formData);
+        await vehicleAPI.types.create(formData);
         toast.success("Vehicle type created successfully");
       }
       handleCloseDialog();
       fetchVehicleTypes();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Operation failed");
+      console.error("Error submitting vehicle type:", error);
+      toast.error("Failed to submit vehicle type");
     }
   };
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this vehicle type?")) {
       try {
-        await vehicleTypeAPI.delete(id);
+        await vehicleAPI.types.remove(id);
         toast.success("Vehicle type deleted successfully");
         fetchVehicleTypes();
       } catch (error) {
+        console.error("Error deleting vehicle type:", error);
         toast.error("Failed to delete vehicle type");
       }
     }
