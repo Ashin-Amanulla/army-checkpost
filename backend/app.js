@@ -17,6 +17,7 @@ const vehicleTypeRoutes = require('./routes/vehicleType.routes');
 const auditLogRoutes = require('./routes/auditLog.routes');
 const reportRoutes = require('./routes/report.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const userRoutes = require('./routes/user.routes');
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDefinition));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/checkposts', checkpostRoutes);
 app.use('/api/vehicletypes', vehicleTypeRoutes);

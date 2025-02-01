@@ -21,6 +21,12 @@ function Layout() {
   const navigate = useNavigate();
   const { user, logout } = useStore();
 
+  const signOut = () => {
+    if(window.confirm("Are you sure you want to delete this user?")){
+      logout();
+    }
+  };
+
   const menuItems = [
     { text: "Dashboard", icon: <Dashboard className="w-5 h-5" />, path: "/" },
     {
@@ -98,7 +104,7 @@ function Layout() {
               <div className="w-2 h-2 rounded-full bg-green-400"></div>
             </div>
             <button
-              onClick={logout}
+              onClick={signOut}
               className="p-2 rounded-md hover:bg-green-800 flex items-center space-x-2"
             >
               <span className="text-sm hidden md:block">Logout</span>

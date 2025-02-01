@@ -85,15 +85,13 @@ function UserManagement() {
         authAPI.getAllUsers(),
         checkpostAPI.getAll(),
       ]);
-      console.log(usersRes);
-      if (usersRes.success  && Array.isArray(usersRes.data)) {
+      if (usersRes.success && Array.isArray(usersRes.data)) {
         setUsers(usersRes.data);
       } else {
-        console.error("Unexpected data format:", usersRes);
         setUsers([]);
       }
-      if (checkpostsRes && checkpostsRes.success) {
-        setCheckposts(checkpostsRes.data);
+      if (checkpostsRes) {
+        setCheckposts(checkpostsRes);
       } else {
         setCheckposts([]);
       }
@@ -107,10 +105,9 @@ function UserManagement() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (formData) => {
     try {
-      if (editMode) {
+      if (selectedUser) {
         await authAPI.updateUser(selectedUser._id, formData);
         toast.success("User updated successfully");
       } else {
@@ -120,7 +117,7 @@ function UserManagement() {
         });
         toast.success("User created successfully");
       }
-      handleCloseDialog();
+      setModalOpen(false);
       fetchInitialData();
     } catch (error) {
       toast.error(error.response?.data?.message || "Operation failed");
@@ -129,16 +126,7 @@ function UserManagement() {
 
   const handleEdit = (user) => {
     setSelectedUser(user);
-    setFormData({
-      username: user.username,
-      password: "",
-      email: user.email,
-      role: user.role,
-      checkpost: user.checkpost?._id || "",
-      active: user.active,
-    });
-    setEditMode(true);
-    setDialogOpen(true);
+    setModalOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -464,14 +452,21 @@ function UserManagement() {
       {/* User Form Modal */}
       <Modal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedUser(null);
+        }}
         title={selectedUser ? "Edit User" : "Add New User"}
       >
         <UserForm
           user={selectedUser}
           onSubmit={handleSubmit}
-          onCancel={() => setModalOpen(false)}
+          onCancel={() => {
+            setModalOpen(false);
+            setSelectedUser(null);
+          }}
           currentUserRole={currentUser.role}
+          checkposts={checkposts}
         />
       </Modal>
     </div>

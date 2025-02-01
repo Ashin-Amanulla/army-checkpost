@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { TextField, Select, MenuItem, FormControlLabel, Switch } from "@mui/material";
 import { Button } from "./ui";
 
-function UserForm({ user, onSubmit, onCancel, currentUserRole }) {
+function UserForm({ user, onSubmit, onCancel, currentUserRole, checkposts }) {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    fullName: "",
+    email: "",
     role: "user",
     checkpost: "",
     active: true
@@ -17,7 +17,7 @@ function UserForm({ user, onSubmit, onCancel, currentUserRole }) {
       setFormData({
         username: user.username || "",
         password: "", // Don't populate password for edit
-        fullName: user.fullName || "",
+        email: user.email || "",
         role: user.role || "user",
         checkpost: user.checkpost?._id || "",
         active: user.active ?? true
@@ -27,13 +27,20 @@ function UserForm({ user, onSubmit, onCancel, currentUserRole }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    const submitData = { ...formData };
+    
+    // Remove password if it's empty in edit mode
+    if (user && !submitData.password) {
+      delete submitData.password;
+    }
+    
+    onSubmit(submitData);
   };
 
   const roles = [
     { value: "user", label: "User" },
     { value: "admin", label: "Admin" },
-    ...(currentUserRole === "super_admin" ? [{ value: "super_admin", label: "Super Admin" }] : [])
+    ...(currentUserRole === "super_admin" ? [{ value: "super_admin", label: "Super Admin" }] : []),
   ];
 
   return (
@@ -67,12 +74,13 @@ function UserForm({ user, onSubmit, onCancel, currentUserRole }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Full Name *
+            Email *
           </label>
           <TextField
             fullWidth
-            value={formData.fullName}
-            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             required
           />
         </div>
@@ -90,6 +98,24 @@ function UserForm({ user, onSubmit, onCancel, currentUserRole }) {
             {roles.map((role) => (
               <MenuItem key={role.value} value={role.value}>
                 {role.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Checkpost
+          </label>
+          <Select
+            fullWidth
+            value={formData.checkpost}
+            onChange={(e) => setFormData({ ...formData, checkpost: e.target.value })}
+          >
+            <MenuItem value="">None</MenuItem>
+            {checkposts?.map((cp) => (
+              <MenuItem key={cp._id} value={cp._id}>
+                {cp.name}
               </MenuItem>
             ))}
           </Select>
@@ -118,4 +144,4 @@ function UserForm({ user, onSubmit, onCancel, currentUserRole }) {
   );
 }
 
-export default UserForm; 
+export default UserForm;

@@ -42,7 +42,7 @@ export const getAllUsers = async () => {
 
 export const updateUser = async (id, userData) => {
   try {
-    const response = await axios.put(`/api/auth/users/${id}`, userData);
+    const response = await axios.put(`/api/users/${id}`, userData);
     return response.data;
   } catch (error) {
     console.error('Error updating user:', error);
@@ -52,7 +52,7 @@ export const updateUser = async (id, userData) => {
 
 export const deleteUser = async (id) => {
   try {
-    const response = await axios.delete(`/api/auth/users/${id}`);
+    const response = await axios.delete(`/api/users/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting user:', error);

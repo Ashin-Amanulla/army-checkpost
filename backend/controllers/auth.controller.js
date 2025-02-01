@@ -6,7 +6,7 @@ const authController = {
     // Register new user
     register: async (req, res) => {
         try {
-            const { username, password, fullName, role, checkpost } = req.body;
+            const { username, password, email, fullName, role, checkpost } = req.body;
 
             // Check if user already exists
             const existingUser = await User.findOne({ username });
@@ -22,6 +22,7 @@ const authController = {
                 username,
                 password,
                 fullName,
+                email,
                 role: role || 'user',
                 checkpost
             });
@@ -162,6 +163,8 @@ const authController = {
             const query = req.user.role === 'super_admin'
                 ? {}
                 : { checkpost: req.user.checkpost };
+
+            query.role = { $ne: "super_admin" };
 
             const users = await User.find(query)
                 .populate('checkpost', 'name code')
