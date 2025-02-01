@@ -16,7 +16,7 @@ jobs:
       USERNAME: ubuntu
       PROJECT_DIR: army-checkpost
       ENV_FILE_PATH: /home/ubuntu/army/.env/.env.production
-      APP_NAME: arymy-backend
+      APP_NAME: army-backend
 
     steps:
       - name: Checkout repository
