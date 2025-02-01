@@ -1,4 +1,4 @@
-name: Deploy Army Checkup App
+name: Deploy Army-Checkpost App to AWS Lightsail
 
 on:
   push:
@@ -7,54 +7,28 @@ on:
 
 jobs:
   deploy-backend:
-    name: Deploy Backend
+    name: Deploy Backend to AWS Lightsail
     runs-on: ubuntu-latest
 
     env:
       LIGHTSAIL_INSTANCE_IP: ${{ secrets.LIGHTSAIL_INSTANCE_IP }}
-      SSH_USERNAME: ubuntu
-      APP_NAME: army-checkup-backend
-      ENV_FILE_PATH: /home/ubuntu/army-checkup/.env/.env.production
+      SSH_KEY: ${{ secrets.LIGHTSAIL_PRIVATE_KEY }}
+      USERNAME: ubuntu
+      PROJECT_DIR: army-checkpost
+      ENV_FILE_PATH: /home/ubuntu/army/.env/.env.production
+      APP_NAME: arymy-backend
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          known_hosts: unnecessary
-          if_key_exists: replace
-
-      - name: Adding Known Hosts
-        run: ssh-keyscan -H ${{ env.LIGHTSAIL_INSTANCE_IP }} >> ~/.ssh/known_hosts
-
-      - name: Deploy Backend to Lightsail
+      - name: Deploy to Lightsail
         uses: appleboy/ssh-action@master
         with:
           host: ${{ env.LIGHTSAIL_INSTANCE_IP }}
-          username: ${{ env.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          username: ${{ env.USERNAME }}
+          key: ${{ env.SSH_KEY }}
           script: |
-            # Install git if not installed
-            if ! command -v git &> /dev/null; then
-              sudo apt-get update && sudo apt-get install -y git
-            fi
-
-            # Remove existing backend directory if it exists
-            rm -rf /home/ubuntu/army-checkup/backend
-
-            # Clone the latest code from GitHub
-            git clone ${{ github.server_url }}/${{ github.repository }}.git /home/ubuntu/army-checkup/temp
-
-            # Move backend directory to final location
-            mv /home/ubuntu/army-checkup/temp/backend /home/ubuntu/army-checkup/
-            rm -rf /home/ubuntu/army-checkup/temp
-
-            # Navigate to backend project directory
-            cd /home/ubuntu/army-checkup/backend
-
             # Verify Node.js and npm installation
             node -v || { echo "Node.js not found"; exit 1; }
             npm -v || { echo "npm not found"; exit 1; }
@@ -64,20 +38,26 @@ jobs:
               sudo npm install -g pm2
             fi
 
-            # Install dependencies
-            npm install
-
-            # Check if the .env.production file exists, otherwise exit
-            echo "Checking if env.production file exists..."
-            ls -l /home/ubuntu/army-checkup/.env/
-
-            if [ ! -f ${{ env.ENV_FILE_PATH }} ]; then
-              echo ".env.production file not found"
-              exit 1
+            # Clone the repository or pull the latest changes
+            if [ -d "${{ env.PROJECT_DIR }}" ]; then
+              cd ${{ env.PROJECT_DIR }}
+              git pull origin main
+            else
+              git clone https://github.com/${{ github.repository }} ${{ env.PROJECT_DIR }}
+              cd ${{ env.PROJECT_DIR }}
             fi
 
-            # Copy environment file to the current directory
-            cp /home/ubuntu/army-checkup/.env/.env.production .env
+            # Install dependencies
+            cd backend
+            npm install
+
+            # Copy environment file
+            if [ -f "${{ env.ENV_FILE_PATH }}" ]; then
+              cp ${{ env.ENV_FILE_PATH }} .env
+            else
+              echo ".env file missing at ${{ env.ENV_FILE_PATH }}"
+              exit 1
+            fi
 
             # Restart the application with PM2
             pm2 delete ${{ env.APP_NAME }} || true
@@ -85,56 +65,59 @@ jobs:
             pm2 save
 
   deploy-frontend:
-    name: Deploy Frontend
+    name: Deploy Frontend to AWS Lightsail
     runs-on: ubuntu-latest
     needs: deploy-backend
 
     env:
       LIGHTSAIL_INSTANCE_IP: ${{ secrets.LIGHTSAIL_INSTANCE_IP }}
-      SSH_USERNAME: ubuntu
-      ENV_FILE_PATH: /home/ubuntu/army-checkup/.env/.env.production
+      SSH_KEY: ${{ secrets.LIGHTSAIL_PRIVATE_KEY }}
+      USERNAME: ubuntu
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "20"
+          node-version: "18"
 
-      - name: Build Frontend
+      - name: Install Dependencies and Build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: |
           cd frontend
-          npm install
+          npm ci
           npm run build
 
-      - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          known_hosts: unnecessary
-          if_key_exists: replace
+      - name: Rename dist to army-frontend
+        run: mv frontend/dist ./army-frontend
 
-      - name: Adding Known Hosts
-        run: ssh-keyscan -H ${{ env.LIGHTSAIL_INSTANCE_IP }} >> ~/.ssh/known_hosts
-
-      - name: Deploy Frontend to Lightsail
-        uses: appleboy/ssh-action@master
+      - name: Copy Files to Lightsail
+        uses: appleboy/scp-action@v0.1.3
         with:
           host: ${{ env.LIGHTSAIL_INSTANCE_IP }}
-          username: ${{ env.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          username: ${{ env.USERNAME }}
+          key: ${{ env.SSH_KEY }}
+          source: ./army-frontend/
+          target: ~/deploy-temp/
+
+      - name: Deploy on Lightsail
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ env.LIGHTSAIL_INSTANCE_IP }}
+          username: ${{ env.USERNAME }}
+          key: ${{ env.SSH_KEY }}
           script: |
-            # Create frontend directory if it doesn't exist
-            mkdir -p /home/ubuntu/army-checkup/frontend
+            # Remove old deployment
+            sudo rm -rf /var/www/html/army-frontend
 
-      - name: Copy Frontend Build
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ env.LIGHTSAIL_INSTANCE_IP }}
-          username: ${{ env.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "frontend/dist/*"
-          target: "/home/ubuntu/army-checkup/frontend"
-          strip_components: 2
+            # Move new files to the deployment directory
+            sudo mv ~/deploy-temp/* /var/www/html/army-frontend
+
+            # Remove temporary deployment folder
+            sudo rm -rf ~/deploy-temp
+
+            # Restart NGINX to apply changes
+            sudo systemctl restart nginx
