@@ -39,6 +39,8 @@ jobs:
             fi
 
             # Clone the repository or pull the latest changes
+            echo "Cloning or pulling repository..."
+            echo "PROJECT_DIR: ${{ github.repository }}"
             if [ -d "${{ env.PROJECT_DIR }}" ]; then
               cd ${{ env.PROJECT_DIR }}
               git pull origin main
