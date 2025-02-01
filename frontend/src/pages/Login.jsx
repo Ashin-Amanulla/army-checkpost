@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { TextField, Button, Alert } from "@mui/material";
 import useStore from "../store/useStore";
 import toast from "react-hot-toast";
@@ -10,14 +10,18 @@ function Login() {
     password: "",
   });
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isLoading, error } = useStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await login(credentials);
-      toast.success("Login successful");
-      navigate("/");
+      const success = await login(credentials);
+      if (success) {
+        toast.success("Login successful");
+        const from = location.state?.from?.pathname || "/";
+        navigate(from, { replace: true });
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
     }

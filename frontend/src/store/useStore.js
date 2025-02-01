@@ -15,20 +15,22 @@ const useStore = create(
                     set({ loading: true });
                     const response = await authAPI.login(credentials);
                     if (response.success) {
+                        const { user, token } = response.data;
                         set({
-                            user: response.data.user,
-                            token: response.data.token,
+                            user,
+                            token,
+                            loading: false
                         });
-                        localStorage.setItem('token', response.data.token);
+                        localStorage.setItem('token', token);
                         return true;
                     }
+                    set({ loading: false });
                     return false;
                 } catch (error) {
                     console.error('Login error:', error);
                     toast.error(error.response?.data?.message || 'Login failed');
-                    return false;
-                } finally {
                     set({ loading: false });
+                    return false;
                 }
             },
 
@@ -63,14 +65,16 @@ const useStore = create(
                         set({ user: null, token: null });
                         return false;
                     }
+
                     const response = await authAPI.getProfile();
                     if (response.success) {
-                        set({ user: response.data });
+                        set({ user: response.data, token });
                         return true;
                     }
                     return false;
                 } catch (error) {
                     console.error('Auth check error:', error);
+                    localStorage.removeItem('token');
                     set({ user: null, token: null });
                     return false;
                 }
@@ -79,8 +83,12 @@ const useStore = create(
             clearError: () => set({ error: null })
         }),
         {
-            name: 'user-storage',
+            name: 'auth-storage',
             getStorage: () => localStorage,
+            partialize: (state) => ({
+                token: state.token,
+                user: state.user
+            })
         }
     )
 );

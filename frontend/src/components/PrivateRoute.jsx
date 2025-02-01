@@ -1,25 +1,26 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import useStore from "../store/useStore";
+import { useEffect, useState } from "react";
 
 const PrivateRoute = ({ children }) => {
-  const { user } = useStore();
+  const { user, token, checkAuth } = useStore();
+  const [isChecking, setIsChecking] = useState(true);
+  const location = useLocation();
 
-  // Check if token is expired (24 hours)
-  const isTokenExpired = () => {
-    if (!user) return true;
-    const tokenDate = new Date(user.tokenCreatedAt || 0);
-    const now = new Date();
-    const hoursDiff = (now - tokenDate) / (1000 * 60 * 60);
-    return hoursDiff >= 24;
-  };
+  useEffect(() => {
+    const verify = async () => {
+      await checkAuth();
+      setIsChecking(false);
+    };
+    verify();
+  }, [checkAuth]);
 
-  if (isTokenExpired()) {
-    useStore.getState().logout();
-    return <Navigate to="/login" />;
+  if (isChecking) {
+    return null; // or a loading spinner
   }
 
-  if (!user) {
-    return <Navigate to="/login" />;
+  if (!user || !token) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return children;
