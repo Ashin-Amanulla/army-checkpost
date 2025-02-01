@@ -177,7 +177,7 @@ function Layout() {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 lg:p-8 lg:ml-64 min-h-[calc(100vh-3.5rem)]">
+        <main className="flex-1 p-4 sm:p-4 md:p-8  lg:p-16 xl:p-24 2xl:p-32 min-h-[calc(100vh-3.5rem)]">
           <Outlet />
         </main>
 
