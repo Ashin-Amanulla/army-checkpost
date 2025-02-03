@@ -2,11 +2,14 @@ import axios from '../config/axios';
 
 export const generateReport = async (params) => {
   try {
-    const response = await axios.get('/api/reports/generate', { params });
-    return response.data;
+      const response = await axios.get('/api/reports/export', {
+          params,
+          responseType: 'blob'  // Ensure response is treated as a file
+      });
+      return response.data;
   } catch (error) {
-    console.error('Error generating report:', error);
-    throw error;
+      console.error('Error generating report:', error);
+      throw error;
   }
 };
 

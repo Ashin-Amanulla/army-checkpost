@@ -63,27 +63,35 @@ function Reports() {
 
   const handleExport = async () => {
     try {
-      setLoading(true);
-      const response = await reportsAPI.exportReport({
-        ...filters,
-        checkpost: user.role === "user" ? user.checkpost : filters.checkpost
-      });
+        setLoading(true);
+        const response = await reportsAPI.generateReport({
+            ...filters,
+            checkpost: user.role === "user" ? user.checkpost : filters.checkpost
+        });
 
-      const url = window.URL.createObjectURL(response);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `report-${filters.reportType}-${format(new Date(), "yyyy-MM-dd")}.${getFileExtension(filters.format)}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
+        // Create a Blob URL from the response
+        const blob = new Blob([response], { type: response.type });
+        const url = window.URL.createObjectURL(blob);
 
-      toast.success("Report exported successfully");
+        // Create a temporary <a> element to trigger download
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `report-${filters.reportType}-${format(new Date(), "yyyy-MM-dd")}.${getFileExtension(filters.format)}`;
+        document.body.appendChild(a);
+        a.click();
+
+        // Cleanup
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        toast.success("Report exported successfully");
     } catch (error) {
-      toast.error("Failed to export report");
+        console.error("Export error:", error);
+        toast.error("Failed to export report");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   const getFileExtension = (format) => {
     switch (format) {

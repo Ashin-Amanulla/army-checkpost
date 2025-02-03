@@ -70,7 +70,7 @@ function CheckpostManagement() {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this checkpost?")) {
       try {
-        await checkpostAPI.delete(id);
+        await checkpostAPI.remove(id);
         toast.success("Checkpost deleted successfully");
         fetchCheckposts();
       } catch (error) {

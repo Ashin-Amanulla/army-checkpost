@@ -143,7 +143,7 @@ function VehicleList() {
 
   const handleViewDetails = async (id) => {
     try {
-      const { data } = await vehicleAPI.getEntry(id);
+      const { data } = await vehicleAPI.entries.getEntry(id);
       setSelectedVehicle(data);
       console.log(data);
       setDetailsOpen(true);
@@ -182,8 +182,7 @@ function VehicleList() {
       {/* Filters Section */}
       {showFilters && (
         <Card
-          className="bg-white"
-          style={{ borderColor: theme.colors.border.light }}
+          className="bg-white border border-white-200"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <DateRangeFilter
