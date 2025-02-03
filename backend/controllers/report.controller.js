@@ -203,21 +203,85 @@ const exportToExcel = async (res, data, reportType) => {
     const workbook = new excel.Workbook();
     const worksheet = workbook.addWorksheet(reportType);
 
-    // Add headers and data based on report type
-    // ... Excel export implementation
+    // Populate Excel with data
+    worksheet.addRow(["Checkpost Name", "Total Entries"]); // Example headers
+    data.forEach((row) => {
+        worksheet.addRow([row.checkpostName, row.totalEntries]);
+    });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=report-${reportType}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+
+    // Write file to response
     await workbook.xlsx.write(res);
+    res.end();
 };
 
 const exportToCSV = async (res, data, reportType) => {
-    // ... CSV export implementation
+    try {
+        let csvContent = "";
+
+        // Add headers dynamically
+        if (data.length > 0) {
+            csvContent += Object.keys(data[0]).join(",") + "\n"; // Column headers
+        }
+
+        // Add data rows
+        data.forEach(row => {
+            csvContent += Object.values(row).join(",") + "\n";
+        });
+
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename=report-${reportType}-${format(new Date(), "yyyy-MM-dd")}.csv`
+        );
+
+        res.send(csvContent);
+    } catch (error) {
+        console.error("CSV export error:", error);
+        res.status(500).json({ message: "Failed to export CSV report" });
+    }
 };
 
 const exportToPDF = async (res, data, reportType) => {
-    // ... PDF export implementation
+    try {
+        const doc = new PDFDocument({ margin: 30 });
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename=report-${reportType}-${format(new Date(), "yyyy-MM-dd")}.pdf`
+        );
+
+        // Pipe the PDF output directly to the response
+        doc.pipe(res);
+
+        // Title
+        doc.fontSize(18).text(`Report: ${reportType}`, { align: "center" }).moveDown(1);
+
+        if (data.length > 0) {
+            // Add table headers
+            const headers = Object.keys(data[0]);
+            doc.fontSize(12).text(headers.join(" | "), { underline: true }).moveDown(0.5);
+
+            // Add data rows
+            data.forEach(row => {
+                const values = Object.values(row).join(" | ");
+                doc.text(values).moveDown(0.2);
+            });
+        } else {
+            doc.text("No data available for this report.", { align: "center" }).moveDown(1);
+        }
+
+        // Finalize the PDF and send response
+        doc.end();
+    } catch (error) {
+        console.error("PDF export error:", error);
+        res.status(500).json({ message: "Failed to export PDF report" });
+    }
 };
+
 
 module.exports = {
     exportReport
