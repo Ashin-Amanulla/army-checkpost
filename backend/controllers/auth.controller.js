@@ -6,7 +6,7 @@ const authController = {
     // Register new user
     register: async (req, res) => {
         try {
-            const { username, password, email, fullName, role, checkpost } = req.body;
+            const { username, password, email, role, checkpost } = req.body;
 
             // Check if user already exists
             const existingUser = await User.findOne({ username });
@@ -21,7 +21,6 @@ const authController = {
             const user = await User.create({
                 username,
                 password,
-                fullName,
                 email,
                 role: role || 'user',
                 checkpost
