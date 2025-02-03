@@ -21,6 +21,7 @@ const auditLogSchema = new mongoose.Schema({
       "LOGOUT",
       "CHECKPOST_CREATE",
       "CHECKPOST_UPDATE",
+      "CHECKPOST_DELETE",
       "SETTINGS_UPDATE",
       "VIEW",
       "VIEW_PROFILE",

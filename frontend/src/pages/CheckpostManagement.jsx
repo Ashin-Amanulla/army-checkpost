@@ -21,6 +21,7 @@ function CheckpostManagement() {
     name: "",
     location: "",
     code: "",
+    active: true
   });
 
   useEffect(() => {
@@ -204,6 +205,16 @@ function CheckpostManagement() {
                     rows={3}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <label className="text-sm font-medium text-gray-700 mr-2">Active</label>
+                  <input
+                    type="checkbox"
+                    checked={formData.active}
+                    onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                   />
                 </div>
 
