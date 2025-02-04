@@ -30,9 +30,9 @@ export const getProfile = async () => {
   }
 };
 
-export const getAllUsers = async () => {
+export const getAllUsers = async (params) => {
   try {
-    const response = await axios.get('/api/auth/users');
+    const response = await axios.get('/api/auth/users', { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching users:', error);
