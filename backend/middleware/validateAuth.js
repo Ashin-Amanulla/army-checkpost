@@ -1,9 +1,9 @@
 const validateRegister = async (req, res, next) => {
     try {
-        const { username, password, fullName, role, checkpost } = req.body;
+        const { username, password, role, checkpost } = req.body;
 
         // Validate required fields
-        if (!username || !password || !fullName) {
+        if (!username || !password) {
             return res.status(400).json({
                 success: false,
                 message: 'Please provide username, password and full name'

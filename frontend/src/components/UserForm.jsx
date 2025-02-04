@@ -40,7 +40,6 @@ function UserForm({ user, onSubmit, onCancel, currentUserRole, checkposts }) {
   const roles = [
     { value: "user", label: "User" },
     { value: "admin", label: "Admin" },
-    ...(currentUserRole === "super_admin" ? [{ value: "super_admin", label: "Super Admin" }] : []),
   ];
 
   return (

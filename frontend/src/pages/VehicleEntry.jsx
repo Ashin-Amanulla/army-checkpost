@@ -42,7 +42,8 @@ function VehicleEntry() {
     try {
       const response = await vehicleAPI.types.getAll();
       if (response) {
-        setVehicleTypes(response);
+        const data = response.filter((item) => item.active === true);
+        setVehicleTypes(data);
       }
     } catch (error) {
       console.error("Error fetching vehicle types:", error);
@@ -55,7 +56,8 @@ function VehicleEntry() {
     try {
       const response = await checkpostAPI.getAll();
       if (response) {
-        setCheckposts(response);
+        const data = response.filter((item) => item.active === true);
+        setCheckposts(data);
       } else {
         setCheckposts([]);
       }

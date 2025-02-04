@@ -11,7 +11,7 @@ exports.createCheckpost = async (req, res) => {
 
 exports.getCheckposts = async (req, res) => {
     try {
-        const checkposts = await Checkpost.find({ active: true });
+        const checkposts = await Checkpost.find();
         res.json(checkposts);
     } catch (error) {
         res.status(500).json({ message: error.message });

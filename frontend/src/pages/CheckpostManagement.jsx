@@ -1,14 +1,6 @@
 import { useState, useEffect } from "react";
-import { Edit,Delete,Business } from "@mui/icons-material";
+import { Edit, Delete, Business } from "@mui/icons-material";
 import { checkpostAPI } from "../services/api";
-import {
-  PageHeader,
-  Card,
-  Button,
-  DataTable,
-  Modal,
-  LoadingSpinner,
-} from "../components/ui";
 import toast from "react-hot-toast";
 
 function CheckpostManagement() {
@@ -21,6 +13,7 @@ function CheckpostManagement() {
     name: "",
     location: "",
     code: "",
+    active: true,
   });
 
   useEffect(() => {
@@ -32,7 +25,6 @@ function CheckpostManagement() {
       setLoading(true);
       const response = await checkpostAPI.getAll();
       if (response) {
-       
         setCheckposts(response);
       }
     } catch (error) {
@@ -64,7 +56,7 @@ function CheckpostManagement() {
     setDialogOpen(false);
     setEditMode(false);
     setSelectedCheckpost(null);
-    setFormData({ name: "", location: "", code: "" });
+    setFormData({ name: "", location: "", code: "", active: true });
   };
 
   const handleDelete = async (id) => {
@@ -84,7 +76,9 @@ function CheckpostManagement() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Checkpost Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Checkpost Management
+          </h1>
           <p className="text-sm text-gray-600">Manage military checkposts</p>
         </div>
         <button
@@ -107,7 +101,10 @@ function CheckpostManagement() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {checkposts.map((checkpost) => (
-            <div key={checkpost._id} className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div
+              key={checkpost._id}
+              className="bg-white rounded-lg shadow-md overflow-hidden"
+            >
               <div className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
@@ -118,21 +115,26 @@ function CheckpostManagement() {
                       <h3 className="text-lg font-medium text-gray-900">
                         {checkpost.name}
                       </h3>
-                      <p className="text-sm text-gray-500">Code: {checkpost.code}</p>
+                      <p className="text-sm text-gray-500">
+                        Code: {checkpost.code}
+                      </p>
                     </div>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    checkpost.active 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {checkpost.active ? 'Active' : 'Inactive'}
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      checkpost.active
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {checkpost.active ? "Active" : "Inactive"}
                   </span>
                 </div>
 
                 <div className="mt-4">
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Location:</span> {checkpost.location}
+                    <span className="font-medium">Location:</span>{" "}
+                    {checkpost.location}
                   </p>
                 </div>
 
@@ -144,6 +146,7 @@ function CheckpostManagement() {
                         name: checkpost.name,
                         location: checkpost.location,
                         code: checkpost.code,
+                        active: checkpost.active,
                       });
                       setEditMode(true);
                       setDialogOpen(true);
@@ -175,35 +178,61 @@ function CheckpostManagement() {
               </h2>
               <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Name</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Name
+                  </label>
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Code</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Code
+                  </label>
                   <input
                     type="text"
                     value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, code: e.target.value })
+                    }
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Location</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Location
+                  </label>
                   <textarea
                     value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, location: e.target.value })
+                    }
                     rows={3}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <label className="text-sm font-medium text-gray-700 mr-2">
+                    Active
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={formData.active}
+                    onChange={(e) =>
+                      setFormData({ ...formData, active: e.target.checked })
+                    }
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                   />
                 </div>
 
@@ -211,13 +240,13 @@ function CheckpostManagement() {
                   <button
                     type="button"
                     onClick={handleCloseDialog}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                    className="text-gray-700"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                    className="bg-green-600 text-white px-4 py-2 rounded-md"
                   >
                     {editMode ? "Update" : "Create"}
                   </button>
