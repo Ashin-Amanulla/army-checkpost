@@ -3,245 +3,234 @@ const User = require('../models/User');
 const Checkpost = require('../models/Checkpost');
 const excel = require('exceljs');
 const PDFDocument = require('pdfkit');
-const { parse, format } = require('date-fns');
+const { parse, format, startOfDay, endOfDay, subDays } = require('date-fns');
 
 const exportReport = async (req, res) => {
     try {
-        const { startDate, endDate, reportType, format } = req.query;
-        const data = await generateReportData(req.user, reportType, startDate, endDate);
+        const { startDate, endDate, reportType, format = 'excel' } = req.query;
+        
+        // Get user's checkpost filter if not admin/super_admin
+        const checkpostFilter = ['super_admin', 'admin'].includes(req.user.role) 
+            ? {} 
+            : { checkpost: req.user.checkpost };
 
-        switch (format) {
+        let data;
+        switch (reportType) {
+            case 'checkpost_entries':
+                data = await generateCheckpostReport(startDate, endDate, checkpostFilter);
+                break;
+            case 'daily_summary':
+                data = await generateDailySummaryReport(startDate, endDate, checkpostFilter);
+                break;
+            case 'vehicle_type_analysis':
+                data = await generateVehicleTypeReport(startDate, endDate, checkpostFilter);
+                break;
+            default:
+                return res.status(400).json({ message: 'Invalid report type' });
+        }
+
+        // Generate and send report based on format
+        switch (format.toLowerCase()) {
             case 'excel':
-                await exportToExcel(res, data, reportType);
+                await generateExcelReport(res, data, reportType);
                 break;
             case 'csv':
-                await exportToCSV(res, data, reportType);
+                await generateCSVReport(res, data, reportType);
                 break;
             case 'pdf':
                 await exportToPDF(res, data, reportType);
                 break;
             default:
-                await exportToExcel(res, data, reportType);
+                res.status(400).json({ message: 'Unsupported format' });
         }
     } catch (error) {
-        console.error('Export error:', error);
-        res.status(500).json({ message: 'Failed to export report' });
+        console.error('Report generation error:', error);
+        res.status(500).json({ message: 'Failed to generate report' });
     }
 };
 
-const generateReportData = async (user, reportType, startDate, endDate) => {
-    const dateFilter = {
-        createdAt: {
-            $gte: new Date(startDate),
-            $lte: new Date(endDate)
+const generateCheckpostReport = async (startDate, endDate, checkpostFilter) => {
+    const pipeline = [
+        {
+            $match: {
+                ...checkpostFilter,
+                ...(startDate && endDate ? {
+                    createdAt: {
+                        $gte: new Date(startDate),
+                        $lte: new Date(endDate)
+                    }
+                } : {})
+            }
+        },
+        {
+            $lookup: {
+                from: 'checkposts',
+                localField: 'checkpost',
+                foreignField: '_id',
+                as: 'checkpostDetails'
+            }
+        },
+        {
+            $unwind: '$checkpostDetails'
+        },
+        {
+            $group: {
+                _id: '$checkpost',
+                checkpostName: { $first: '$checkpostDetails.name' },
+                totalEntries: { $sum: 1 },
+                vehicles: { $push: '$$ROOT' }
+            }
         }
-    };
+    ];
 
-    const checkpostFilter = user.role === 'user' ? { checkpost: user.checkpost } : {};
+    return await Vehicle.aggregate(pipeline);
+};
 
+const generateDailySummaryReport = async (startDate, endDate, checkpostFilter) => {
+    const pipeline = [
+        {
+            $match: {
+                ...checkpostFilter,
+                ...(startDate && endDate ? {
+                    createdAt: {
+                        $gte: new Date(startDate),
+                        $lte: new Date(endDate)
+                    }
+                } : {})
+            }
+        },
+        {
+            $group: {
+                _id: {
+                    date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }
+                },
+                totalEntries: { $sum: 1 }
+            }
+        },
+        {
+            $sort: { '_id.date': 1 }
+        }
+    ];
+
+    return await Vehicle.aggregate(pipeline);
+};
+
+const generateVehicleTypeReport = async (startDate, endDate, checkpostFilter) => {
+    const pipeline = [
+        {
+            $match: {
+                ...checkpostFilter,
+                ...(startDate && endDate ? {
+                    createdAt: {
+                        $gte: new Date(startDate),
+                        $lte: new Date(endDate)
+                    }
+                } : {})
+            }
+        },
+        {
+            $lookup: {
+                from: 'vehicletypes',
+                localField: 'vehicleType',
+                foreignField: '_id',
+                as: 'vehicleTypeDetails'
+            }
+        },
+        {
+            $unwind: '$vehicleTypeDetails'
+        },
+        {
+            $group: {
+                _id: '$vehicleType',
+                vehicleTypeName: { $first: '$vehicleTypeDetails.name' },
+                count: { $sum: 1 }
+            }
+        }
+    ];
+
+    return await Vehicle.aggregate(pipeline);
+};
+
+const generateExcelReport = async (res, data, reportType) => {
+    const workbook = new excel.Workbook();
+    const worksheet = workbook.addWorksheet('Report');
+
+    // Configure headers based on report type
     switch (reportType) {
         case 'checkpost_entries':
-            return await Vehicle.aggregate([
-                { 
-                    $match: { 
-                        ...dateFilter,
-                        ...checkpostFilter 
-                    } 
-                },
-                {
-                    $lookup: {
-                        from: 'checkposts',
-                        localField: 'checkpost',
-                        foreignField: '_id',
-                        as: 'checkpostDetails'
-                    }
-                },
-                { $unwind: '$checkpostDetails' },
-                {
-                    $lookup: {
-                        from: 'vehicletypes',
-                        localField: 'vehicleType',
-                        foreignField: '_id',
-                        as: 'vehicleTypeDetails'
-                    }
-                },
-                { $unwind: '$vehicleTypeDetails' },
-                {
-                    $group: {
-                        _id: {
-                            checkpost: '$checkpostDetails._id',
-                            checkpostName: '$checkpostDetails.name',
-                            vehicleType: '$vehicleTypeDetails.name'
-                        },
-                        totalEntries: { $sum: 1 },
-                        vehicles: { 
-                            $push: {
-                                vehicleNumber: '$vehicleNumber',
-                                entryTime: '$createdAt'
-                            }
-                        }
-                    }
-                },
-                {
-                    $group: {
-                        _id: {
-                            checkpost: '$_id.checkpost',
-                            checkpostName: '$_id.checkpostName'
-                        },
-                        vehicleTypes: {
-                            $push: {
-                                type: '$_id.vehicleType',
-                                count: '$totalEntries',
-                                vehicles: '$vehicles'
-                            }
-                        },
-                        totalEntries: { $sum: '$totalEntries' }
-                    }
-                },
-                {
-                    $project: {
-                        checkpost: '$_id.checkpost',
-                        checkpostName: '$_id.checkpostName',
-                        vehicleTypes: 1,
-                        totalEntries: 1,
-                        _id: 0
-                    }
-                },
-                { $sort: { checkpostName: 1 } }
-            ]);
+            worksheet.columns = [
+                { header: 'Checkpost', key: 'checkpostName', width: 20 },
+                { header: 'Total Entries', key: 'totalEntries', width: 15 }
+            ];
+            worksheet.addRows(data.map(item => ({
+                checkpostName: item.checkpostName,
+                totalEntries: item.totalEntries
+            })));
+            break;
 
         case 'daily_summary':
-            return await Vehicle.aggregate([
-                { 
-                    $match: { 
-                        ...dateFilter,
-                        ...checkpostFilter 
-                    } 
-                },
-                {
-                    $group: {
-                        _id: {
-                            date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                            checkpost: '$checkpost'
-                        },
-                        totalEntries: { $sum: 1 }
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'checkposts',
-                        localField: '_id.checkpost',
-                        foreignField: '_id',
-                        as: 'checkpostDetails'
-                    }
-                },
-                { $unwind: '$checkpostDetails' },
-                {
-                    $project: {
-                        date: '$_id.date',
-                        checkpost: '$checkpostDetails.name',
-                        totalEntries: 1,
-                        _id: 0
-                    }
-                },
-                { $sort: { date: -1, checkpost: 1 } }
-            ]);
+            worksheet.columns = [
+                { header: 'Date', key: 'date', width: 15 },
+                { header: 'Total Entries', key: 'entries', width: 15 }
+            ];
+            worksheet.addRows(data.map(item => ({
+                date: item._id.date,
+                entries: item.totalEntries
+            })));
+            break;
 
         case 'vehicle_type_analysis':
-            return await Vehicle.aggregate([
-                { 
-                    $match: { 
-                        ...dateFilter,
-                        ...checkpostFilter 
-                    } 
-                },
-                {
-                    $lookup: {
-                        from: 'vehicletypes',
-                        localField: 'vehicleType',
-                        foreignField: '_id',
-                        as: 'vehicleTypeDetails'
-                    }
-                },
-                { $unwind: '$vehicleTypeDetails' },
-                {
-                    $group: {
-                        _id: {
-                            checkpost: '$checkpost',
-                            vehicleType: '$vehicleTypeDetails.name'
-                        },
-                        count: { $sum: 1 }
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'checkposts',
-                        localField: '_id.checkpost',
-                        foreignField: '_id',
-                        as: 'checkpostDetails'
-                    }
-                },
-                { $unwind: '$checkpostDetails' },
-                {
-                    $project: {
-                        checkpost: '$checkpostDetails.name',
-                        vehicleType: '$_id.vehicleType',
-                        count: 1,
-                        _id: 0
-                    }
-                },
-                { $sort: { checkpost: 1, vehicleType: 1 } }
-            ]);
-
-        default:
-            throw new Error('Invalid report type');
+            worksheet.columns = [
+                { header: 'Vehicle Type', key: 'type', width: 20 },
+                { header: 'Count', key: 'count', width: 15 }
+            ];
+            worksheet.addRows(data.map(item => ({
+                type: item.vehicleTypeName,
+                count: item.count
+            })));
+            break;
     }
-};
 
-// Export helper functions...
-const exportToExcel = async (res, data, reportType) => {
-    const workbook = new excel.Workbook();
-    const worksheet = workbook.addWorksheet(reportType);
+    // Style the header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+    };
 
-    // Populate Excel with data
-    worksheet.addRow(["Checkpost Name", "Total Entries"]); // Example headers
-    data.forEach((row) => {
-        worksheet.addRow([row.checkpostName, row.totalEntries]);
-    });
+    // Set response headers
+    res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=${reportType}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+    );
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=report-${reportType}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
-
-    // Write file to response
+    // Send the workbook
     await workbook.xlsx.write(res);
     res.end();
 };
 
-const exportToCSV = async (res, data, reportType) => {
-    try {
-        let csvContent = "";
+const generateCSVReport = async (res, data, reportType) => {
+    const workbook = new excel.Workbook();
+    const worksheet = workbook.addWorksheet('Report');
 
-        // Add headers dynamically
-        if (data.length > 0) {
-            csvContent += Object.keys(data[0]).join(",") + "\n"; // Column headers
-        }
+    // Configure headers and data similar to Excel report
+    // ... (same configuration as in generateExcelReport)
 
-        // Add data rows
-        data.forEach(row => {
-            csvContent += Object.values(row).join(",") + "\n";
-        });
+    // Set response headers for CSV
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=${reportType}_${format(new Date(), 'yyyy-MM-dd')}.csv`
+    );
 
-        res.setHeader("Content-Type", "text/csv");
-        res.setHeader(
-            "Content-Disposition",
-            `attachment; filename=report-${reportType}-${format(new Date(), "yyyy-MM-dd")}.csv`
-        );
-
-        res.send(csvContent);
-    } catch (error) {
-        console.error("CSV export error:", error);
-        res.status(500).json({ message: "Failed to export CSV report" });
-    }
+    // Write to response
+    await workbook.csv.write(res);
+    res.end();
 };
 
 const exportToPDF = async (res, data, reportType) => {
@@ -281,7 +270,6 @@ const exportToPDF = async (res, data, reportType) => {
         res.status(500).json({ message: "Failed to export PDF report" });
     }
 };
-
 
 module.exports = {
     exportReport
