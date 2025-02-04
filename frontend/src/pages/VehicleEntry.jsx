@@ -219,11 +219,11 @@ function VehicleEntry() {
                   </select>
                 </div>
 
-                {user.role !== "user" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Checkpost *
-                    </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Checkpost *
+                  </label>
+                  {user.role !== "user" ? (
                     <select
                       value={formData.checkpost}
                       onChange={(e) =>
@@ -240,8 +240,8 @@ function VehicleEntry() {
                           </option>
                         ))}
                     </select>
-                  </div>
-                )}
+                  ):(<div>{user.checkpost.code}</div>)}
+                </div>
               </div>
             </div>
 

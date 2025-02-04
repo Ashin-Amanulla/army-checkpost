@@ -2,7 +2,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import useStore from "../store/useStore";
 import { useEffect, useState } from "react";
 
-const PrivateRoute = ({ children }) => {
+const PrivateRoute = ({ children, allowedRoles = [] }) => {
   const { user, token, checkAuth } = useStore();
   const [isChecking, setIsChecking] = useState(true);
   const location = useLocation();
@@ -21,6 +21,14 @@ const PrivateRoute = ({ children }) => {
 
   if (!user || !token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles.length === 0) {
+    return children;
+  }
+
+  if (!allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
   }
 
   return children;

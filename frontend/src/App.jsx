@@ -12,7 +12,7 @@ import Reports from "./pages/Reports";
 import UserManagement from "./pages/UserManagement";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 function App() {
   return (
@@ -32,12 +32,56 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="vehicle-entry" element={<VehicleEntry />} />
             <Route path="vehicle-list" element={<VehicleList />} />
-            <Route path="checkposts" element={<CheckpostManagement />} />
-            <Route path="vehicle-types" element={<VehicleTypeManagement />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="audit-log" element={<AuditLog />} />
+
+            {/* Protected routes for admin and super_admin only */}
+            <Route
+              path="checkposts"
+              element={
+                <PrivateRoute allowedRoles={["super_admin"]}>
+                  <CheckpostManagement />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="vehicle-types"
+              element={
+                <PrivateRoute allowedRoles={["super_admin", "admin"]}>
+                  <VehicleTypeManagement />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="reports"
+              element={
+                <PrivateRoute allowedRoles={["super_admin", "admin"]}>
+                  <Reports />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="users"
+              element={
+                <PrivateRoute allowedRoles={["super_admin"]}>
+                  <UserManagement />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <PrivateRoute allowedRoles={["super_admin", "admin"]}>
+                  <Settings />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="audit-log"
+              element={
+                <PrivateRoute allowedRoles={["super_admin", "admin"]}>
+                  <AuditLog />
+                </PrivateRoute>
+              }
+            />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

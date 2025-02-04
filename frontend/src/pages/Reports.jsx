@@ -20,10 +20,7 @@ function Reports() {
     { value: "checkpost_entries", label: "Checkpost-wise Entries" },
     { value: "daily_summary", label: "Daily Entry Summary" },
     { value: "vehicle_type_analysis", label: "Vehicle Type Analysis" },
-    { value: "checkpost_summary", label: "Checkpost Summary" },
-    ...(["super_admin", "admin"].includes(user.role) ? [
-      { value: "checkpost_comparison", label: "Checkpost Comparison" }
-    ] : [])
+   
   ];
 
   const exportFormats = [
