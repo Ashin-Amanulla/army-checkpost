@@ -94,7 +94,7 @@ function Layout() {
                 <FleetCheckLogo className="w-10 h-10" />
               </div>
               <span className="font-semibold text-lg hidden md:block">
-                FleetCheck | Army Checkpost
+                CHT Connect
               </span>
             </div>
           </div>

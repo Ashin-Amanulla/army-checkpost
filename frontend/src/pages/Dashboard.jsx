@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { dashboardAPI } from "../services/api";
-import { 
-  DirectionsCar, 
-  ExitToApp, 
-  Today, 
+import {
+  DirectionsCar,
+  ExitToApp,
+  Today,
   Assessment,
   ListAlt,
   History,
-  TrendingUp
+  TrendingUp,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -25,7 +25,7 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
 } from "recharts";
 
 function Dashboard() {
@@ -39,13 +39,13 @@ function Dashboard() {
     vehicleTypeData: [],
     weeklyTrends: [],
     hourlyDistribution: [],
-    checkpostAnalytics: []
+    checkpostAnalytics: [],
   });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [timeframe, setTimeframe] = useState('daily');
+  const [timeframe, setTimeframe] = useState("daily");
 
-  const COLORS = ['#16a34a', '#2563eb', '#d97706', '#dc2626', '#7c3aed'];
+  const COLORS = ["#16a34a", "#2563eb", "#d97706", "#dc2626", "#7c3aed"];
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -80,7 +80,9 @@ function Dashboard() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Today's Entries</p>
+              <p className="text-sm font-medium text-gray-600">
+                Today's Entries
+              </p>
               <p className="mt-1 text-3xl font-semibold text-gray-900">
                 {stats.todayEntries}
               </p>
@@ -94,7 +96,9 @@ function Dashboard() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Vehicles</p>
+              <p className="text-sm font-medium text-gray-600">
+                Active Vehicles
+              </p>
               <p className="mt-1 text-3xl font-semibold text-gray-900">
                 {stats.activeVehicles}
               </p>
@@ -138,7 +142,9 @@ function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Weekly Trends Chart */}
         <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Weekly Trends</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Weekly Trends
+          </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stats.weeklyTrends}>
@@ -147,10 +153,10 @@ function Dashboard() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="entries" 
-                  stroke="#16a34a" 
+                <Line
+                  type="monotone"
+                  dataKey="entries"
+                  stroke="#16a34a"
                   strokeWidth={2}
                 />
               </LineChart>
@@ -160,7 +166,9 @@ function Dashboard() {
 
         {/* Vehicle Type Distribution */}
         <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Vehicle Type Distribution</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Vehicle Type Distribution
+          </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -174,7 +182,10 @@ function Dashboard() {
                   label
                 >
                   {stats.vehicleTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -204,26 +215,28 @@ function Dashboard() {
         {/* Checkpost Analytics */}
         <Card className="p-6 lg:col-span-2">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-medium text-gray-900">Checkpost Analytics</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              Checkpost Analytics
+            </h3>
             <div className="flex gap-2">
               <Button
-                variant={timeframe === 'daily' ? 'primary' : 'secondary'}
+                variant={timeframe === "daily" ? "primary" : "secondary"}
                 size="sm"
-                onClick={() => setTimeframe('daily')}
+                onClick={() => setTimeframe("daily")}
               >
                 Daily
               </Button>
               <Button
-                variant={timeframe === 'weekly' ? 'primary' : 'secondary'}
+                variant={timeframe === "weekly" ? "primary" : "secondary"}
                 size="sm"
-                onClick={() => setTimeframe('weekly')}
+                onClick={() => setTimeframe("weekly")}
               >
                 Weekly
               </Button>
               <Button
-                variant={timeframe === 'monthly' ? 'primary' : 'secondary'}
+                variant={timeframe === "monthly" ? "primary" : "secondary"}
                 size="sm"
-                onClick={() => setTimeframe('monthly')}
+                onClick={() => setTimeframe("monthly")}
               >
                 Monthly
               </Button>
@@ -240,45 +253,48 @@ function Dashboard() {
                 <YAxis />
                 <Tooltip
                   formatter={(value) => [
-                    timeframe === 'daily' ? value.toFixed(1) : Math.round(value),
-                    'Entries'
+                    timeframe === "daily"
+                      ? value.toFixed(1)
+                      : Math.round(value),
+                    "Entries",
                   ]}
                 />
                 <Legend />
                 <Bar
                   dataKey={
-                    timeframe === 'daily'
-                      ? 'avgDailyEntries'
-                      : timeframe === 'weekly'
-                      ? 'weeklyTotal'
-                      : 'totalEntries'
+                    timeframe === "daily"
+                      ? "avgDailyEntries"
+                      : timeframe === "weekly"
+                      ? "weeklyTotal"
+                      : "totalEntries"
                   }
                   fill="#16a34a"
-                  name={`${timeframe.charAt(0).toUpperCase() + timeframe.slice(1)} Entries`}
+                  name={`${
+                    timeframe.charAt(0).toUpperCase() + timeframe.slice(1)
+                  } Entries`}
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {stats.checkpostAnalytics?.map((checkpost) => (
-              <div
-                key={checkpost._id}
-                className="p-4 bg-gray-50 rounded-lg"
-              >
-                <h4 className="text-sm font-medium text-gray-600">{checkpost.name}</h4>
+              <div key={checkpost._id} className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-600">
+                  {checkpost.name}
+                </h4>
                 <p className="mt-1 text-2xl font-semibold text-gray-900">
-                  {timeframe === 'daily'
+                  {timeframe === "daily"
                     ? checkpost.avgDailyEntries
-                    : timeframe === 'weekly'
+                    : timeframe === "weekly"
                     ? Math.round(checkpost.avgDailyEntries * 7)
                     : checkpost.totalEntries}
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  {timeframe === 'daily'
-                    ? 'Avg. Daily Entries'
-                    : timeframe === 'weekly'
-                    ? 'Weekly Entries'
-                    : 'Monthly Entries'}
+                  {timeframe === "daily"
+                    ? "Avg. Daily Entries"
+                    : timeframe === "weekly"
+                    ? "Weekly Entries"
+                    : "Monthly Entries"}
                 </p>
               </div>
             ))}
@@ -328,7 +344,7 @@ function Dashboard() {
                     {entry.checkpost?.name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {format(new Date(entry.createdAt), 'dd/MM/yyyy HH:mm')}
+                    {format(new Date(entry.createdAt), "dd/MM/yyyy HH:mm")}
                   </td>
                 </tr>
               ))}
