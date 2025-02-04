@@ -91,50 +91,6 @@ function AuditLog() {
         </div>
       ),
     },
-    {
-      key: "details",
-      label: "Details",
-      render: (row) => {
-        if (!row.details) return null;
-
-        if (row.details.changes) {
-          return (
-            <div className="space-y-3">
-              {Object.entries(row.details.changes).map(([field, values]) => (
-                <div key={field} className="text-sm">
-                  <div className="font-medium text-gray-700 mb-1">{field}</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <div className="text-xs text-gray-500">Previous</div>
-                      <div className="text-red-600 bg-red-50 p-1 rounded text-xs">
-                        {values.old}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">New</div>
-                      <div className="text-green-600 bg-green-50 p-1 rounded text-xs">
-                        {values.new}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          );
-        }
-
-        return (
-          <div className="space-y-1">
-            {Object.entries(row.details).map(([key, value]) => (
-              <div key={key} className="text-sm">
-                <span className="font-medium text-gray-600">{key}:</span>{" "}
-                <span className="text-gray-800">{value}</span>
-              </div>
-            ))}
-          </div>
-        );
-      },
-    },
   ];
 
   const actionTypes = [
