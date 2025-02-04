@@ -72,13 +72,13 @@ const VehicleCard = ({
         </div>
 
         <div className="mt-4 flex justify-end space-x-2 border-t pt-4">
-          <button
+          {/* <button
             onClick={onView}
             className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
             title="View Details"
           >
             <Visibility className="w-5 h-5" />
-          </button>
+          </button> */}
           {vehicle.status === "entered" && onExit && (
             <button
               onClick={onExit}

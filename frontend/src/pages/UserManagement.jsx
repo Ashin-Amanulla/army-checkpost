@@ -82,7 +82,7 @@ function UserManagement() {
     setLoading(true);
     try {
       const [usersRes, checkpostsRes] = await Promise.all([
-        authAPI.getAllUsers(),
+        authAPI.getAllUsers(filters),
         checkpostAPI.getAll(),
       ]);
       if (usersRes.success && Array.isArray(usersRes.data)) {

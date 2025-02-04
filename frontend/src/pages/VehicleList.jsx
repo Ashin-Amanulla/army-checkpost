@@ -84,8 +84,9 @@ function VehicleList() {
   const fetchVehicleTypes = async () => {
     try {
       const response = await vehicleAPI.types.getAll();
-      if (response.success) {
-        setVehicleTypes(response.data);
+      if (response) {
+        const data = response.filter((item) => item.active === true);
+        setVehicleTypes(data);
       }
     } catch (error) {
       console.error("Error fetching vehicle types:", error);
@@ -115,7 +116,9 @@ function VehicleList() {
 
   const handleExit = async (id) => {
     try {
-      const response = await vehicleAPI.entries.updateEntry(id, { status: 'exited' });
+      const response = await vehicleAPI.entries.updateEntry(id, {
+        status: "exited",
+      });
       if (response.success) {
         toast.success("Vehicle exit recorded successfully");
         fetchVehicles();
@@ -166,7 +169,7 @@ function VehicleList() {
         icon={<DirectionsCar className="w-6 h-6" />}
         actions={
           <div className="flex items-center gap-2">
-            <ViewToggle view={viewMode} onToggle={setViewMode} />
+            {/* <ViewToggle view={viewMode} onToggle={setViewMode} /> */}
             <Button
               variant="secondary"
               onClick={() => setShowFilters(!showFilters)}
@@ -181,18 +184,19 @@ function VehicleList() {
 
       {/* Filters Section */}
       {showFilters && (
-        <Card
-          className="bg-white border border-white-200"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-white border border-gray-200 shadow-md p-6 rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Date Range Filter */}
             <DateRangeFilter
               startDate={filters.startDate}
               endDate={filters.endDate}
               onChange={(field, value) =>
                 setFilters({ ...filters, [field]: value })
               }
+              className="w-full"
             />
 
+            {/* Vehicle Type Filter */}
             <Select
               value={filters.vehicleType}
               onChange={(value) =>
@@ -203,37 +207,33 @@ function VehicleList() {
                 label: type.name,
               }))}
               placeholder="All Vehicle Types"
-              className="border-gray-300"
+              className="border-gray-300 rounded-lg w-full"
             />
+          </div>
 
-            <Select
-              value={filters.status}
-              onChange={(value) => setFilters({ ...filters, status: value })}
-              options={[
-                { value: "entered", label: "Currently Inside" },
-                { value: "exited", label: "Exited" },
-              ]}
-              placeholder="All Status"
-            />
-
-            <div className="flex justify-end lg:col-span-4 gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setFilters({
-                    startDate: null,
-                    endDate: null,
-                    vehicleType: "",
-                    status: "",
-                  });
-                }}
-              >
-                Clear
-              </Button>
-              <Button variant="primary" onClick={handleSearch}>
-                Apply Filters
-              </Button>
-            </div>
+          {/* Button Section */}
+          <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto border-gray-300"
+              onClick={() =>
+                setFilters({
+                  startDate: null,
+                  endDate: null,
+                  vehicleType: "",
+                  status: "",
+                })
+              }
+            >
+              Clear
+            </Button>
+            <Button
+              variant="primary"
+              className="w-full sm:w-auto"
+              onClick={handleSearch}
+            >
+              Apply Filters
+            </Button>
           </div>
         </Card>
       )}
@@ -265,7 +265,7 @@ function VehicleList() {
               : "space-y-4"
           }
         >
-          {Array.isArray(vehicles) && 
+          {Array.isArray(vehicles) &&
             vehicles.map((vehicle) => (
               <VehicleCard
                 key={vehicle._id}
@@ -285,7 +285,7 @@ function VehicleList() {
       <Modal
         open={detailsOpen}
         onClose={() => setDetailsOpen(false)}
-        title={`Vehicle Entry - ${selectedVehicle?.vehicleNumber || ''}`}
+        title={`Vehicle Entry - ${selectedVehicle?.vehicleNumber || ""}`}
       >
         {selectedVehicle && (
           <div className="space-y-6">
@@ -335,7 +335,8 @@ function VehicleList() {
                   Checkpost
                 </label>
                 <p className="mt-1 text-lg font-medium">
-                  {selectedVehicle.checkpost?.name} ({selectedVehicle.checkpost?.code})
+                  {selectedVehicle.checkpost?.name} (
+                  {selectedVehicle.checkpost?.code})
                 </p>
               </div>
               <div>
@@ -343,7 +344,10 @@ function VehicleList() {
                   Entry Time
                 </label>
                 <p className="mt-1 text-lg font-medium">
-                  {format(new Date(selectedVehicle.createdAt), "dd/MM/yyyy HH:mm")}
+                  {format(
+                    new Date(selectedVehicle.createdAt),
+                    "dd/MM/yyyy HH:mm"
+                  )}
                 </p>
               </div>
               <div>
@@ -351,7 +355,8 @@ function VehicleList() {
                   Entered By
                 </label>
                 <p className="mt-1 text-lg font-medium">
-                  {selectedVehicle.createdBy?.fullName || selectedVehicle.createdBy?.username}
+                  {selectedVehicle.createdBy?.fullName ||
+                    selectedVehicle.createdBy?.username}
                 </p>
               </div>
 
