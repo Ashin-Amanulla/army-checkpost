@@ -185,7 +185,7 @@ function Dashboard() {
         </Card>
 
         {/* Hourly Distribution Chart */}
-        <Card className="p-6 lg:col-span-2">
+        {/* <Card className="p-6 lg:col-span-2">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Hourly Distribution</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -199,7 +199,7 @@ function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </Card> */}
 
         {/* Checkpost Analytics */}
         <Card className="p-6 lg:col-span-2">

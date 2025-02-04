@@ -63,12 +63,12 @@ function Layout() {
       path: "/users",
       roles: ["super_admin"],
     },
-    {
-      text: "Settings",
-      icon: <SettingsIcon className="w-5 h-5" />,
-      path: "/settings",
-      roles: ["super_admin", "admin"],
-    },
+    // {
+    //   text: "Settings",
+    //   icon: <SettingsIcon className="w-5 h-5" />,
+    //   path: "/settings",
+    //   roles: ["super_admin", "admin"],
+    // },
     {
       text: "Audit Log",
       icon: <HistoryIcon className="w-5 h-5" />,

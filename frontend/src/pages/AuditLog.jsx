@@ -77,7 +77,7 @@ function AuditLog() {
       key: "action",
       label: "Activity",
       render: (row) => (
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div>
             <span
               className={`px-2 py-1 rounded-full text-xs font-medium ${getActionColor(
