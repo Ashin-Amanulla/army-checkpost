@@ -58,14 +58,21 @@ const authController = {
       const { username, password } = req.body;
 
       // Check if user exists
-      const user = await User.findOne({ username, active: true })
+      const user = await User.findOne({ username })
         .select("+password")
         .populate("checkpost", "name code");
 
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: "Invalid credentials",
+          message: "User not found",
+        });
+      }
+
+      if (user.active !== true) {
+        return res.status(401).json({
+          success: false,
+          message: "Your account is not active, please contact admin",
         });
       }
 
