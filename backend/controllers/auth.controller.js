@@ -58,7 +58,7 @@ const authController = {
       const { username, password } = req.body;
 
       // Check if user exists
-      const user = await User.findOne({ username })
+      const user = await User.findOne({ username, active: true })
         .select("+password")
         .populate("checkpost", "name code");
 
