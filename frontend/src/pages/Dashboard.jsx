@@ -8,10 +8,11 @@ import {
   ListAlt,
   History,
   TrendingUp,
+  LocationOn,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { Card, Button } from "../components/ui";
+import { Card, Button, StatsCard } from "../components/ui";
 import {
   BarChart,
   Bar,
@@ -40,10 +41,13 @@ function Dashboard() {
     weeklyTrends: [],
     hourlyDistribution: [],
     checkpostAnalytics: [],
+    activeCheckposts: 0,
+    checkpostDistribution: [],
   });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [timeframe, setTimeframe] = useState("daily");
+  const [timeRange, setTimeRange] = useState('daily'); // 'daily', 'weekly', 'monthly'
 
   const COLORS = ["#16a34a", "#2563eb", "#d97706", "#dc2626", "#7c3aed"];
 
@@ -76,115 +80,111 @@ function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">
-                Today's Entries
-              </p>
-              <p className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.todayEntries}
-              </p>
-            </div>
-            <div className="p-3 bg-green-50 rounded-full">
-              <Today className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">
-                Active Vehicles
-              </p>
-              <p className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.activeVehicles}
-              </p>
-            </div>
-            <div className="p-3 bg-blue-50 rounded-full">
-              <DirectionsCar className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Weekly Total</p>
-              <p className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.weeklyTotal}
-              </p>
-            </div>
-            <div className="p-3 bg-orange-50 rounded-full">
-              <Assessment className="w-6 h-6 text-orange-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Monthly Total</p>
-              <p className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.monthlyTotal}
-              </p>
-            </div>
-            <div className="p-3 bg-purple-50 rounded-full">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <StatsCard
+          title="Today's Entries"
+          value={stats.todayEntries}
+          icon={DirectionsCar}
+        />
+        <StatsCard
+          title="Active Checkposts"
+          value={stats.activeCheckposts}
+          icon={LocationOn}
+        />
+        <StatsCard
+          title="Total Entries"
+          value={stats.totalEntries}
+          subtitle="All time"
+          icon={Assessment}
+        />
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Weekly Trends Chart */}
+        {/* Weekly Summary Chart */}
         <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Weekly Trends
-          </h3>
-          <div className="h-80">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Weekly Entry Summary</h3>
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stats.weeklyTrends}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="entries"
-                  stroke="#16a34a"
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => format(new Date(value), 'dd/MM')}
+                />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip
+                  formatter={(value) => [value, 'Entries']}
+                  labelFormatter={(label) => format(new Date(label), 'dd MMM yyyy')}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="#16a34a" 
                   strokeWidth={2}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        {/* Vehicle Type Distribution */}
+        {/* Checkpost Distribution Chart with Tabs */}
         <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Vehicle Type Distribution
-          </h3>
-          <div className="h-80">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-medium text-gray-900">Checkpost Entry Distribution</h3>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setTimeRange('daily')}
+                className={`px-3 py-1 text-sm rounded-md ${
+                  timeRange === 'daily'
+                    ? 'bg-green-100 text-green-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Daily
+              </button>
+              <button
+                onClick={() => setTimeRange('weekly')}
+                className={`px-3 py-1 text-sm rounded-md ${
+                  timeRange === 'weekly'
+                    ? 'bg-green-100 text-green-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Weekly
+              </button>
+              <button
+                onClick={() => setTimeRange('monthly')}
+                className={`px-3 py-1 text-sm rounded-md ${
+                  timeRange === 'monthly'
+                    ? 'bg-green-100 text-green-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Monthly
+              </button>
+            </div>
+          </div>
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={stats.vehicleTypeData}
+                  data={stats[`${timeRange}CheckpostDistribution`]}
                   dataKey="value"
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={100}
-                  label
+                  outerRadius={80}
+                  fill="#16a34a"
+                  label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}
                 >
-                  {stats.vehicleTypeData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
+                  {stats[`${timeRange}CheckpostDistribution`]?.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={`hsl(142, ${30 + index * 20}%, ${40 + index * 10}%)`} 
                     />
                   ))}
                 </Pie>
@@ -192,112 +192,6 @@ function Dashboard() {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-          </div>
-        </Card>
-
-        {/* Hourly Distribution Chart */}
-        {/* <Card className="p-6 lg:col-span-2">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Hourly Distribution</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.hourlyDistribution}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="hour" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="entries" fill="#16a34a" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card> */}
-
-        {/* Checkpost Analytics */}
-        <Card className="p-6 lg:col-span-2">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-medium text-gray-900">
-              Checkpost Analytics
-            </h3>
-            <div className="flex gap-2">
-              <Button
-                variant={timeframe === "daily" ? "primary" : "secondary"}
-                size="sm"
-                onClick={() => setTimeframe("daily")}
-              >
-                Daily
-              </Button>
-              <Button
-                variant={timeframe === "weekly" ? "primary" : "secondary"}
-                size="sm"
-                onClick={() => setTimeframe("weekly")}
-              >
-                Weekly
-              </Button>
-              <Button
-                variant={timeframe === "monthly" ? "primary" : "secondary"}
-                size="sm"
-                onClick={() => setTimeframe("monthly")}
-              >
-                Monthly
-              </Button>
-            </div>
-          </div>
-          <div className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={stats.checkpostAnalytics}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip
-                  formatter={(value) => [
-                    timeframe === "daily"
-                      ? value.toFixed(1)
-                      : Math.round(value),
-                    "Entries",
-                  ]}
-                />
-                <Legend />
-                <Bar
-                  dataKey={
-                    timeframe === "daily"
-                      ? "avgDailyEntries"
-                      : timeframe === "weekly"
-                      ? "weeklyTotal"
-                      : "totalEntries"
-                  }
-                  fill="#16a34a"
-                  name={`${
-                    timeframe.charAt(0).toUpperCase() + timeframe.slice(1)
-                  } Entries`}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {stats.checkpostAnalytics?.map((checkpost) => (
-              <div key={checkpost._id} className="p-4 bg-gray-50 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-600">
-                  {checkpost.name}
-                </h4>
-                <p className="mt-1 text-2xl font-semibold text-gray-900">
-                  {timeframe === "daily"
-                    ? checkpost.avgDailyEntries
-                    : timeframe === "weekly"
-                    ? Math.round(checkpost.avgDailyEntries * 7)
-                    : checkpost.totalEntries}
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  {timeframe === "daily"
-                    ? "Avg. Daily Entries"
-                    : timeframe === "weekly"
-                    ? "Weekly Entries"
-                    : "Monthly Entries"}
-                </p>
-              </div>
-            ))}
           </div>
         </Card>
       </div>

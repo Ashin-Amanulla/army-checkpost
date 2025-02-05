@@ -1,6 +1,7 @@
 const VehicleEntry = require('../models/Vehicle');
 const VehicleType = require('../models/VehicleType');
-const { startOfWeek, eachDayOfInterval, format, startOfToday, endOfToday, subDays } = require('date-fns');
+const { startOfWeek, eachDayOfInterval, format, startOfToday, endOfToday, subDays, startOfDay, startOfMonth } = require('date-fns');
+const Checkpost = require('../models/Checkpost');
 
 const dashboardController = {
     getStats: async (req, res) => {
@@ -19,18 +20,14 @@ const dashboardController = {
             // Get basic stats
             const [
                 todayEntries,
-                activeVehicles,
                 totalEntries,
                 weeklyTotal,
-                monthlyTotal
+                monthlyTotal,
+                activeCheckposts
             ] = await Promise.all([
                 VehicleEntry.countDocuments({
                     ...checkpostFilter,
                     createdAt: { $gte: today }
-                }),
-                VehicleEntry.countDocuments({
-                    ...checkpostFilter,
-                    status: 'entered'
                 }),
                 VehicleEntry.countDocuments(checkpostFilter),
                 VehicleEntry.countDocuments({
@@ -40,77 +37,39 @@ const dashboardController = {
                 VehicleEntry.countDocuments({
                     ...checkpostFilter,
                     createdAt: { $gte: monthStart }
-                })
-            ]);
-
-            // Get vehicle type distribution
-            const vehicleTypeData = await VehicleEntry.aggregate([
-                { $match: checkpostFilter },
-                {
-                    $lookup: {
-                        from: 'vehicletypes',
-                        localField: 'vehicleType',
-                        foreignField: '_id',
-                        as: 'vehicleType'
-                    }
-                },
-                { $unwind: '$vehicleType' },
-                {
-                    $group: {
-                        _id: '$vehicleType._id',
-                        name: { $first: '$vehicleType.name' },
-                        value: { $sum: 1 }
-                    }
-                }
+                }),
+                Checkpost.countDocuments({ active: true })
             ]);
 
             // Get weekly trends
-            const weeklyTrends = await Promise.all(
-                eachDayOfInterval({ start: weekStart, end: today })
-                    .map(async (date) => {
-                        const nextDay = new Date(date);
-                        nextDay.setDate(date.getDate() + 1);
-                        
-                        const count = await VehicleEntry.countDocuments({
-                            ...checkpostFilter,
-                            createdAt: {
-                                $gte: date,
-                                $lt: nextDay
-                            }
-                        });
-
-                        return {
-                            day: format(date, 'EEE'),
-                            entries: count
-                        };
-                    })
-            );
-
-            // Get hourly distribution for today
-            const hourlyDistribution = await VehicleEntry.aggregate([
+            const weeklyTrends = await VehicleEntry.aggregate([
                 {
                     $match: {
                         ...checkpostFilter,
-                        createdAt: {
-                            $gte: startOfToday(),
-                            $lte: endOfToday()
-                        }
+                        createdAt: { $gte: weekStart }
                     }
                 },
                 {
                     $group: {
-                        _id: { $hour: '$createdAt' },
-                        entries: { $sum: 1 }
+                        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                        count: { $sum: 1 }
                     }
                 },
                 {
                     $project: {
-                        hour: '$_id',
-                        entries: 1,
-                        _id: 0
+                        _id: 0,
+                        date: "$_id",
+                        count: 1
                     }
                 },
-                { $sort: { hour: 1 } }
+                { $sort: { date: 1 } }
+            ]);
+
+            // Get distribution data for different time ranges
+            const [dailyDist, weeklyDist, monthlyDist] = await Promise.all([
+                getCheckpostDistribution(startOfDay(new Date()), checkpostFilter),
+                getCheckpostDistribution(startOfWeek(new Date()), checkpostFilter),
+                getCheckpostDistribution(startOfMonth(new Date()), checkpostFilter)
             ]);
 
             // Get recent entries
@@ -119,78 +78,21 @@ const dashboardController = {
                 .populate('checkpost', 'name code')
                 .populate('createdBy', 'username')
                 .sort('-createdAt')
-                .limit(5);
-
-            // Get checkpost analytics
-            const checkpostAnalytics = await VehicleEntry.aggregate([
-                {
-                    $match: {
-                        createdAt: { $gte: subDays(today, 30) } // Last 30 days
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'checkposts',
-                        localField: 'checkpost',
-                        foreignField: '_id',
-                        as: 'checkpost'
-                    }
-                },
-                { $unwind: '$checkpost' },
-                {
-                    $group: {
-                        _id: {
-                            checkpost: '$checkpost._id',
-                            date: {
-                                $dateToString: {
-                                    format: '%Y-%m-%d',
-                                    date: '$createdAt'
-                                }
-                            }
-                        },
-                        checkpostName: { $first: '$checkpost.name' },
-                        dailyCount: { $sum: 1 }
-                    }
-                },
-                {
-                    $group: {
-                        _id: '$_id.checkpost',
-                        checkpostName: { $first: '$checkpostName' },
-                        dailyData: {
-                            $push: {
-                                date: '$_id.date',
-                                count: '$dailyCount'
-                            }
-                        },
-                        totalEntries: { $sum: '$dailyCount' },
-                        avgDailyEntries: { $avg: '$dailyCount' }
-                    }
-                },
-                {
-                    $project: {
-                        _id: 1,
-                        name: '$checkpostName',
-                        dailyData: 1,
-                        totalEntries: 1,
-                        avgDailyEntries: { $round: ['$avgDailyEntries', 1] }
-                    }
-                },
-                { $sort: { totalEntries: -1 } }
-            ]);
+                .limit(10);
 
             res.json({
                 success: true,
                 data: {
                     todayEntries,
-                    activeVehicles,
+                    activeCheckposts,
                     totalEntries,
                     weeklyTotal,
                     monthlyTotal,
                     recentEntries,
-                    vehicleTypeData,
                     weeklyTrends,
-                    hourlyDistribution,
-                    checkpostAnalytics
+                    dailyCheckpostDistribution: dailyDist,
+                    weeklyCheckpostDistribution: weeklyDist,
+                    monthlyCheckpostDistribution: monthlyDist
                 }
             });
         } catch (error) {
@@ -201,6 +103,38 @@ const dashboardController = {
             });
         }
     }
+};
+
+const getCheckpostDistribution = async (startDate, baseFilter = {}) => {
+    return VehicleEntry.aggregate([
+        {
+            $match: {
+                ...baseFilter,
+                createdAt: { $gte: startDate }
+            }
+        },
+        {
+            $group: {
+                _id: "$checkpost",
+                value: { $sum: 1 }
+            }
+        },
+        {
+            $lookup: {
+                from: "checkposts",
+                localField: "_id",
+                foreignField: "_id",
+                as: "checkpostInfo"
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                name: { $arrayElemAt: ["$checkpostInfo.name", 0] },
+                value: 1
+            }
+        }
+    ]);
 };
 
 module.exports = dashboardController; 

@@ -9,7 +9,7 @@ const exportReport = async (req, res) => {
     try {
         const { startDate, endDate, reportType, format = 'excel' } = req.query;
         
-        // Get user's checkpost filter if not admin/super_admin
+        // Get user's checkpost filter
         const checkpostFilter = ['super_admin', 'admin'].includes(req.user.role) 
             ? {} 
             : { checkpost: req.user.checkpost };
