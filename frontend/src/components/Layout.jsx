@@ -177,7 +177,7 @@ function Layout() {
               Cht connect v2.0
             </div>
             <div className="text-xs text-gray-400 text-center mt-1">
-              {new Date().getFullYear()} © Xyvin & NiMo
+              {new Date().getFullYear()} © <a href="https://www.xyvin.com" target="_blank" rel="noopener noreferrer">Xyvin</a> & NiMo
             </div>
           </div>
         </div>

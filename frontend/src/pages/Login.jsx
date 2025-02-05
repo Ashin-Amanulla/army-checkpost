@@ -100,7 +100,7 @@ function Login() {
 
         <div className="text-center text-sm text-gray-600">Jai Hind 🇮🇳</div>
         <div className="text-center text-sm text-gray-600">
-          {new Date().getFullYear()} © Xyvin & NiMo
+          {new Date().getFullYear()} © <a href="https://www.xyvin.com" target="_blank" rel="noopener noreferrer">Xyvin</a> & NiMo
         </div>
       </div>
     </div>
