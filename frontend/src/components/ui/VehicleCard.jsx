@@ -72,7 +72,7 @@ const VehicleCard = ({ vehicle, onView, onDispatchChange, className = "" }) => {
             <div>
               <p className="text-gray-500">Dispatch</p>
               <p className="font-medium">
-                {vehicle.dispatch
+                {vehicle.dispatch && vehicle.dispatchDate
                   ? format(new Date(vehicle?.dispatchDate), "dd/MM/yyyy HH:mm")
                   : "Not Dispatched"}
               </p>
