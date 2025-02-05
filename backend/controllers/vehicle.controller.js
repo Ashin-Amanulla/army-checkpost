@@ -184,7 +184,7 @@ const vehicleController = {
         }
     },
 
-    updateExit: async (req, res) => {
+    deleteEntry: async (req, res) => {
         try {
             const entry = await VehicleEntry.findById(req.params.id);
 
@@ -192,15 +192,9 @@ const vehicleController = {
                 return res.status(404).json({ message: 'Entry not found' });
             }
 
-            if (entry.checkpost.toString() !== req.user.checkpost.toString()) {
-                return res.status(403).json({ message: 'Not authorized' });
-            }
+            const deleteEntry = await VehicleEntry.findByIdAndDelete(req.params.id);
 
-            entry.exitTime = Date.now();
-            entry.status = 'exited';
-            await entry.save();
-
-            res.json(entry);
+            res.json(deleteEntry);
         } catch (error) {
             res.status(500).json({ message: error.message });
         }

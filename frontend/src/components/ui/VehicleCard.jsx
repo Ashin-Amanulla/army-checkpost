@@ -1,15 +1,14 @@
 import { format } from "date-fns";
-import { DirectionsCar, ExitToApp, Visibility } from "@mui/icons-material";
+import { DirectionsCar, ExitToApp, Delete} from "@mui/icons-material";
 import { StatusBadge } from "./";
+import useStore from "../../store/useStore";
 
-const VehicleCard = ({ 
-  vehicle, 
-  onView, 
-  onExit,
-  className = "" 
-}) => {
+const VehicleCard = ({ vehicle, onView, onExit, className = "" }) => {
+  const { user } = useStore();
   return (
-    <div className={`bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 ${className}`}>
+    <div
+      className={`bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 ${className}`}
+    >
       {/* Vehicle Photo */}
       {vehicle.photoUrl && (
         <div className="relative h-48 bg-gray-100">
@@ -56,7 +55,9 @@ const VehicleCard = ({
             </div>
             <div>
               <p className="text-gray-500">Entered By</p>
-              <p className="font-medium">{vehicle.createdBy?.username || "N/A"}</p>
+              <p className="font-medium">
+                {vehicle.createdBy?.username || "N/A"}
+              </p>
             </div>
             <div>
               <p className="text-gray-500">Purpose</p>
@@ -72,13 +73,16 @@ const VehicleCard = ({
         </div>
 
         <div className="mt-4 flex justify-end space-x-2 border-t pt-4">
-          {/* <button
-            onClick={onView}
-            className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
-            title="View Details"
-          >
-            <Visibility className="w-5 h-5" />
-          </button> */}
+          {user?.role !== "user" && (
+            <button
+              onClick={onView}
+              className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+              title="View Details"
+            >
+              <Delete className="w-5 h-5 text-red-600" />
+            </button>
+          )}
+
           {vehicle.status === "entered" && onExit && (
             <button
               onClick={onExit}
@@ -94,4 +98,4 @@ const VehicleCard = ({
   );
 };
 
-export default VehicleCard; 
+export default VehicleCard;
