@@ -300,7 +300,7 @@ function VehicleEntry() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Purpose of Visit *
+                Remarks *
                 </label>
                 <textarea
                   value={formData.purpose}
@@ -312,7 +312,7 @@ function VehicleEntry() {
                   }
                   rows={3}
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 placeholder-gray-400"
-                  placeholder="Enter purpose of visit"
+                  placeholder="Enter Remarks"
                   required
                 />
               </div>

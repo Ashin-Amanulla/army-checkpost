@@ -394,7 +394,7 @@ function VehicleList() {
               </div>
               <div className="col-span-2">
                 <label className="text-sm font-medium text-gray-500">
-                  Purpose of Visit
+                Remarks
                 </label>
                 <p className="mt-1 text-lg font-medium">
                   {selectedVehicle.purpose}

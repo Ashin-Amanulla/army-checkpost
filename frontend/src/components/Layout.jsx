@@ -22,7 +22,7 @@ function Layout() {
   const { user, logout } = useStore();
 
   const signOut = () => {
-    if(window.confirm("Are you sure you want to Logout?")){
+    if (window.confirm("Are you sure you want to Logout?")) {
       logout();
     }
   };
@@ -174,10 +174,10 @@ function Layout() {
           {/* Sidebar Footer */}
           <div className="p-4 border-t border-gray-200 bg-white">
             <div className="text-xs text-gray-500 text-center">
-              FleetCheck v1.0
+              Cht connect v2.0
             </div>
             <div className="text-xs text-gray-400 text-center mt-1">
-              {new Date().getFullYear()} © Military Fleet Management
+              {new Date().getFullYear()} © Xyvin & NiMo
             </div>
           </div>
         </div>

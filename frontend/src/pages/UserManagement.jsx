@@ -91,7 +91,8 @@ function UserManagement() {
         setUsers([]);
       }
       if (checkpostsRes) {
-        setCheckposts(checkpostsRes);
+        const data = checkpostsRes.filter((item) => item.active === true);
+        setCheckposts(data);
       } else {
         setCheckposts([]);
       }

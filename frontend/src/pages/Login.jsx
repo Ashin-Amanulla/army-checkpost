@@ -40,9 +40,9 @@ function Login() {
         </div>
 
         <h1 className="text-2xl font-bold text-center text-gray-800">
-          Indian Army Checkpost System
+          CHT CONNECT
         </h1>
-        <p className="text-center text-gray-600">Vehicle Entry Management</p>
+        <p className="text-center text-gray-600">CHT Management System</p>
 
         {error && (
           <div className="bg-red-50 border-l-4 border-red-500 p-4 text-red-700">
@@ -99,6 +99,9 @@ function Login() {
         </form>
 
         <div className="text-center text-sm text-gray-600">Jai Hind 🇮🇳</div>
+        <div className="text-center text-sm text-gray-600">
+          {new Date().getFullYear()} © Xyvin & NiMo
+        </div>
       </div>
     </div>
   );
