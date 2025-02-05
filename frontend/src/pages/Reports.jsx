@@ -9,6 +9,8 @@ import toast from "react-hot-toast";
 function Reports() {
   const { user } = useStore();
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState();
+  console.log("🚀 ~ Reports ~ stats:", stats)
   const [filters, setFilters] = useState({
     startDate: null,
     endDate: null,
@@ -28,6 +30,17 @@ function Reports() {
     { value: "csv", label: "CSV" },
     { value: "pdf", label: "PDF" }
   ];
+
+  const getTodays = async () => {
+    const res = await reportsAPI.getTodayStats()
+    if(res.success){
+      setStats(res.data)
+    }
+  }
+
+  useEffect(() => {
+    getTodays()
+  }, [])
 
   const getDateRange = (range) => {
     const now = new Date();
@@ -245,15 +258,11 @@ function Reports() {
             <dl className="mt-5 space-y-4">
               <div className="flex items-center justify-between">
                 <dt className="text-sm text-gray-500">Total Entries</dt>
-                <dd className="text-sm font-medium text-gray-900">0</dd>
+                <dd className="text-sm font-medium text-gray-900">{stats?.totalEntries}</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-sm text-gray-500">Total Exits</dt>
-                <dd className="text-sm font-medium text-gray-900">0</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-sm text-gray-500">Active Vehicles</dt>
-                <dd className="text-sm font-medium text-gray-900">0</dd>
+                <dd className="text-sm font-medium text-gray-900">{stats?.dispatchedEntries}</dd>
               </div>
             </dl>
           </div>

@@ -6,5 +6,6 @@ const dashboardController = require('../controllers/dashboard.controller');
 router.use(protect);
 
 router.get('/stats', dashboardController.getStats);
+router.get('/today', dashboardController.getTodayStats);
 
 module.exports = router; 

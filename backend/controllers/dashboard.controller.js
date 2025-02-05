@@ -102,6 +102,32 @@ const dashboardController = {
                 message: error.message
             });
         }
+    },
+    getTodayStats : async (req, res) => {
+        try {
+            const today = new Date();
+            const startDate = startOfToday(today);
+            const endDate = endOfToday(today);  
+            const result = await Promise.all([
+                VehicleEntry.countDocuments({ createdAt: { $gte: startDate, $lte: endDate } }),
+                VehicleEntry.countDocuments({ dispatchDate: { $gte: startDate, $lte: endDate }, dispatch: true }),
+            ])
+
+            res.json({
+                success: true,
+                data: {
+                    totalEntries: result[0],
+                    dispatchedEntries: result[1],
+                }
+            });
+            
+        } catch (error) {
+            console.error('Error in getTodayStats:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message
+            }); 
+        }
     }
 };
 

@@ -24,3 +24,13 @@ export const downloadReport = async (id) => {
     throw error;
   }
 }; 
+
+export const getTodayStats = async () => {
+  try {
+    const response = await axios.get('/api/dashboard/today');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching today stats:', error);
+    throw error;
+  }
+};
