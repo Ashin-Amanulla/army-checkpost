@@ -146,12 +146,15 @@ function VehicleList() {
 
   const handleViewDetails = async (id) => {
     try {
-      const { data } = await vehicleAPI.entries.getEntry(id);
-      setSelectedVehicle(data);
-      console.log(data);
-      setDetailsOpen(true);
+      if (window.confirm("Are you sure you want to delete this entry?")) {
+        const res = await vehicleAPI.entries.deleteEntry(id);
+        fetchVehicles();
+        if (res) {
+          toast.success("Entry deleted successfully");
+        }
+      }
     } catch (error) {
-      toast.error("Failed to fetch vehicle details");
+      toast.error("Failed to delete vehicle entry");
     }
   };
 
@@ -391,7 +394,7 @@ function VehicleList() {
               </div>
               <div className="col-span-2">
                 <label className="text-sm font-medium text-gray-500">
-                  Purpose of Visit
+                Remarks
                 </label>
                 <p className="mt-1 text-lg font-medium">
                   {selectedVehicle.purpose}
