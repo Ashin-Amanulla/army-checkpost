@@ -109,6 +109,29 @@ function VehicleList() {
     }
   };
 
+
+  const handleDispatchChange = async (id, status)=>{
+    try {
+      const response = await vehicleAPI.entries.updateEntry(id, {
+        status,
+      });
+
+      if (response) {
+        toast.success("Dispatch changed successfully");
+        setVehicles((prevVehicles) =>
+          prevVehicles.map((vehicle) =>
+            vehicle._id === id
+              ? { ...vehicle, dispatch: status }
+              : vehicle
+          )
+        );
+      }
+      
+    } catch (error) {
+      console.error("Error changing dispatch:", error);
+    }
+  }
+
   const handleSearch = () => {
     setPage(0);
     fetchVehicles();
@@ -274,6 +297,7 @@ function VehicleList() {
                 key={vehicle._id}
                 vehicle={vehicle}
                 onView={() => handleViewDetails(vehicle._id)}
+                onDispatchChange={handleDispatchChange}
                 onExit={
                   vehicle.status === "entered"
                     ? () => handleExit(vehicle._id)

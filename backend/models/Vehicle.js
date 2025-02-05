@@ -32,6 +32,13 @@ const vehicleSchema = new mongoose.Schema({
         type: String,
         required: false
     },
+    dispatch: {
+        type: Boolean,
+        default: false
+    },
+    dispatchDate: {
+        type: Date,
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

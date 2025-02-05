@@ -1,3 +1,4 @@
+const { ca } = require("date-fns/locale");
 const VehicleEntry = require("../models/Vehicle");
 
 const vehicleController = {
@@ -111,9 +112,6 @@ const vehicleController = {
           .populate("vehicleType", "name")
           .populate("checkpost", "name code location")
           .populate("createdBy", "username fullName")
-          .select(
-            "vehicleNumber vehicleType checkpost createdBy driverName driverPhone purpose photoUrl createdAt"
-          )
           .sort("-createdAt")
           .skip(skip)
           .limit(Number(limit)),
@@ -227,6 +225,33 @@ const vehicleController = {
     }
   },
 
+  exitEntry: async (req, res) => {
+    try {
+      const entry = await VehicleEntry.findById(req.params.id);
+      const { status: dispatch } = req.body;
+      if (!entry) {
+        return res.status(404).json({ message: "Entry not found" });
+      }
+
+      const data = {
+        dispatch,
+      };
+
+      if (dispatch) {
+        data.dispatchDate = Date.now();
+      }
+
+      const exitEntry = await VehicleEntry.findByIdAndUpdate(
+        req.params.id,
+        data,
+        { new: true }
+      );
+
+      res.json(exitEntry);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
   createVehicle: async (req, res) => {
     try {
       const { vehicleNumber, vehicleType, checkpost } = req.body;

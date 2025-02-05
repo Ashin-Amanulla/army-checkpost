@@ -37,6 +37,11 @@ router.post('/',
     wrapWithAudit(vehicleController.createEntry, 'VEHICLE_ENTRY')
 );
 
+router.put('/:id',
+    authorize(['admin', 'super_admin']),
+    wrapWithAudit(vehicleController.exitEntry, 'VEHICLE_EXIT')
+);
+
 router.delete('/:id',
     authorize(['admin', 'super_admin']),
     wrapWithAudit(vehicleController.deleteEntry, 'VEHICLE_EXIT')

@@ -1,9 +1,9 @@
 import { format } from "date-fns";
-import { DirectionsCar, ExitToApp, Delete} from "@mui/icons-material";
+import { DirectionsCar, Delete } from "@mui/icons-material";
 import { StatusBadge } from "./";
 import useStore from "../../store/useStore";
 
-const VehicleCard = ({ vehicle, onView, onExit, className = "" }) => {
+const VehicleCard = ({ vehicle, onView, onDispatchChange, className = "" }) => {
   const { user } = useStore();
   return (
     <div
@@ -22,7 +22,7 @@ const VehicleCard = ({ vehicle, onView, onExit, className = "" }) => {
 
       <div className="p-4 space-y-4">
         {/* Header */}
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-green-50 rounded-full">
               <DirectionsCar className="w-5 h-5 text-green-600" />
@@ -69,10 +69,44 @@ const VehicleCard = ({ vehicle, onView, onExit, className = "" }) => {
                 {vehicle.checkpost?.name} ({vehicle.checkpost?.code})
               </p>
             </div>
+            <div>
+              <p className="text-gray-500">Dispatch</p>
+              <p className="font-medium">
+                {vehicle.dispatch
+                  ? format(new Date(vehicle?.dispatchDate), "dd/MM/yyyy HH:mm")
+                  : "Not Dispatched"}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="mt-4 flex justify-end space-x-2 border-t pt-4">
+        {/* Dispatch Toggle */}
+        <div className="mt-4 flex justify-between items-center border-t pt-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-500">Dispatch:</span>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="hidden"
+                checked={vehicle.dispatch}
+                onChange={() =>
+                  onDispatchChange(vehicle._id, !vehicle.dispatch)
+                }
+              />
+              <div
+                className={`w-12 h-6 flex items-center bg-gray-300 rounded-full p-1 transition ${
+                  vehicle.dispatch ? "bg-green-500" : "bg-gray-400"
+                }`}
+              >
+                <div
+                  className={`bg-white w-5 h-5 rounded-full shadow-md transform transition ${
+                    vehicle.dispatch ? "translate-x-6" : ""
+                  }`}
+                ></div>
+              </div>
+            </label>
+          </div>
+
           {user?.role !== "user" && (
             <button
               onClick={onView}
@@ -80,16 +114,6 @@ const VehicleCard = ({ vehicle, onView, onExit, className = "" }) => {
               title="View Details"
             >
               <Delete className="w-5 h-5 text-red-600" />
-            </button>
-          )}
-
-          {vehicle.status === "entered" && onExit && (
-            <button
-              onClick={onExit}
-              className="p-2 text-red-600 hover:text-red-900 rounded-full hover:bg-red-50"
-              title="Record Exit"
-            >
-              <ExitToApp className="w-5 h-5" />
             </button>
           )}
         </div>
