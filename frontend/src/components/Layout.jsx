@@ -15,6 +15,7 @@ import {
 } from "@mui/icons-material";
 import useStore from "../store/useStore";
 import FleetCheckLogo from "./FleetCheckLogo";
+import logo from "../logo.png";
 
 function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -91,11 +92,8 @@ function Layout() {
             </button>
             <div className="flex items-center space-x-2">
               <div className="flex items-center">
-                <FleetCheckLogo className="w-10 h-10" />
+                <img src={logo} alt="Logo" className="w-[130px] h-[auto] object-contain"/>
               </div>
-              <span className="font-semibold text-lg hidden md:block">
-                CHT Connect
-              </span>
             </div>
           </div>
           <div className="flex items-center space-x-4">

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TextField, Button, Alert } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import useStore from "../store/useStore";
+import logo from "../logo.png";
 import toast from "react-hot-toast";
 
 function Login() {
@@ -9,6 +11,7 @@ function Login() {
     username: "",
     password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isLoading, error } = useStore();
@@ -32,16 +35,8 @@ function Login() {
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-2xl">
         {/* Indian Army Logo */}
         <div className="flex justify-center">
-          <img
-            src="/indian-army-logo.png"
-            alt="Indian Army Logo"
-            className="w-24 h-24"
-          />
+          <img src={logo} alt="CHT Connect Logo" className="object-contain" />
         </div>
-
-        <h1 className="text-2xl font-bold text-center text-gray-800">
-          CHT CONNECT
-        </h1>
         <p className="text-center text-gray-600">CHT Management System</p>
 
         {error && (
@@ -74,18 +69,27 @@ function Login() {
               <label className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <input
-                type="password"
-                value={credentials.password}
-                onChange={(e) =>
-                  setCredentials({
-                    ...credentials,
-                    password: e.target.value,
-                  })
-                }
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={credentials.password}
+                  onChange={(e) =>
+                    setCredentials({
+                      ...credentials,
+                      password: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -100,7 +104,15 @@ function Login() {
 
         <div className="text-center text-sm text-gray-600">Jai Hind 🇮🇳</div>
         <div className="text-center text-sm text-gray-600">
-          {new Date().getFullYear()} © <a href="https://www.xyvin.com" target="_blank" rel="noopener noreferrer">Xyvin</a> & NiMo
+          {new Date().getFullYear()} ©{" "}
+          <a
+            href="https://www.xyvin.com"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Xyvin
+          </a>{" "}
+          & NiMo
         </div>
       </div>
     </div>
