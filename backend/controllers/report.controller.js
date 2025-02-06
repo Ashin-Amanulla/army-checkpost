@@ -8,6 +8,19 @@ const { parse, format, startOfDay, endOfDay, subDays } = require('date-fns');
 const exportReport = async (req, res) => {
     try {
         const { startDate, endDate, reportType, format = 'excel' } = req.query;
+        const formatDate = (date, isEnd = false) => {
+            const formattedDate = new Date(date);
+            if (isEnd) {
+                formattedDate.setUTCHours(23, 59, 59, 999);
+            } else {
+                formattedDate.setUTCHours(0, 0, 0, 0);
+            }
+            return formattedDate.toISOString();
+        };
+        
+        const startDateToUse = startDate ? formatDate(startDate, false) : formatDate(new Date(), false);
+        const endDateToUse = endDate ? formatDate(endDate, true) : formatDate(new Date(), true);
+        
         
         // Get user's checkpost filter based on role
         const checkpostFilter = ['super_admin', 'admin'].includes(req.user.role) 
@@ -17,13 +30,13 @@ const exportReport = async (req, res) => {
         let data;
         switch (reportType) {
             case 'checkpost_entries':
-                data = await generateCheckpostReport(startDate, endDate, checkpostFilter);
+                data = await generateCheckpostReport(startDateToUse, endDateToUse, checkpostFilter);
                 break;
             case 'daily_summary':
-                data = await generateDailySummaryReport(startDate, endDate, checkpostFilter);
+                data = await generateDailySummaryReport(startDateToUse, endDateToUse, checkpostFilter);
                 break;
             case 'vehicle_type_analysis':
-                data = await generateVehicleTypeReport(startDate, endDate, checkpostFilter);
+                data = await generateVehicleTypeReport(startDateToUse, endDateToUse, checkpostFilter);
                 break;
             default:
                 return res.status(400).json({ message: 'Invalid report type' });

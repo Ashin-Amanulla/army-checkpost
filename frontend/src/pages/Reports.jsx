@@ -261,11 +261,11 @@ function Reports() {
             <h3 className="text-lg font-medium text-gray-900">Today's Summary</h3>
             <dl className="mt-5 space-y-4">
               <div className="flex items-center justify-between">
-                <dt className="text-sm text-gray-500">Total Entries</dt>
+                <dt className="text-sm text-gray-500">Today's Entries</dt>
                 <dd className="text-sm font-medium text-gray-900">{stats?.totalEntries}</dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="text-sm text-gray-500">Total Exits</dt>
+                <dt className="text-sm text-gray-500">Today's Dispatch</dt>
                 <dd className="text-sm font-medium text-gray-900">{stats?.dispatchedEntries}</dd>
               </div>
             </dl>

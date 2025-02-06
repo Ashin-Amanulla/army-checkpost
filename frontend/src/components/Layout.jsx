@@ -16,6 +16,7 @@ import {
 import useStore from "../store/useStore";
 import FleetCheckLogo from "./FleetCheckLogo";
 import logo from "../logo.png";
+import fav from "../fav.png"
 
 function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -93,7 +94,10 @@ function Layout() {
             </button>
             <div className="flex items-center space-x-2">
               <div className="flex items-center">
-                <img src={logo} alt="Logo" className="w-[130px] h-[auto] object-contain"/>
+                <img src={fav} alt="Logo" className="w-[50px] h-[auto] object-contain"/>
+                <span className="font-semibold text-lg hidden md:block">
+                CHT Connect
+              </span>
               </div>
             </div>
           </div>
