@@ -32,12 +32,15 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="vehicle-entry" element={<VehicleEntry />} />
             <Route path="vehicle-list" element={<VehicleList />} />
+            
+            {/* Remove the allowedRoles restriction for Reports */}
+            <Route path="reports" element={<Reports />} />
 
             {/* Protected routes for admin and super_admin only */}
             <Route
               path="checkposts"
               element={
-                <PrivateRoute allowedRoles={["super_admin"]}>
+                <PrivateRoute allowedRoles={["super_admin", "admin"]}>
                   <CheckpostManagement />
                 </PrivateRoute>
               }
@@ -47,14 +50,6 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={["super_admin", "admin"]}>
                   <VehicleTypeManagement />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="reports"
-              element={
-                <PrivateRoute allowedRoles={["super_admin", "admin"]}>
-                  <Reports />
                 </PrivateRoute>
               }
             />

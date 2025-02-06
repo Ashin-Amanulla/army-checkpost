@@ -29,53 +29,54 @@ function Layout() {
   };
 
   const menuItems = [
-    { text: "Dashboard", icon: <Dashboard className="w-5 h-5" />, path: "/" },
     {
-      text: "Vehicle Entry",
+      label: "Dashboard",
+      icon: <Dashboard className="w-5 h-5" />,
+      path: "/",
+      allowedRoles: ["super_admin", "admin", "user"]
+    },
+    {
+      label: "Vehicle Entry",
       icon: <DirectionsCar className="w-5 h-5" />,
       path: "/vehicle-entry",
+      allowedRoles: ["super_admin", "admin", "user"]
     },
     {
-      text: "Vehicle List",
+      label: "Vehicle List",
       icon: <ListIcon className="w-5 h-5" />,
       path: "/vehicle-list",
+      allowedRoles: ["super_admin", "admin", "user"]
     },
     {
-      text: "Checkposts",
-      icon: <LocationOn className="w-5 h-5" />,
-      path: "/checkposts",
-      roles: ["super_admin"],
-    },
-    {
-      text: "Vehicle Types",
-      icon: <Category className="w-5 h-5" />,
-      path: "/vehicle-types",
-      roles: ["super_admin", "admin"],
-    },
-    {
-      text: "Reports",
+      label: "Reports",
       icon: <Assessment className="w-5 h-5" />,
       path: "/reports",
-      roles: ["super_admin", "admin"],
+      allowedRoles: ["super_admin", "admin", "user"]
     },
     {
-      text: "User Management",
+      label: "Checkposts",
+      icon: <LocationOn className="w-5 h-5" />,
+      path: "/checkposts",
+      allowedRoles: ["super_admin", "admin"]
+    },
+    {
+      label: "Vehicle Types",
+      icon: <Category className="w-5 h-5" />,
+      path: "/vehicle-types",
+      allowedRoles: ["super_admin", "admin"]
+    },
+    {
+      label: "User Management",
       icon: <People className="w-5 h-5" />,
       path: "/users",
-      roles: ["super_admin"],
+      allowedRoles: ["super_admin"]
     },
-    // {
-    //   text: "Settings",
-    //   icon: <SettingsIcon className="w-5 h-5" />,
-    //   path: "/settings",
-    //   roles: ["super_admin", "admin"],
-    // },
     {
-      text: "Audit Log",
+      label: "Audit Log",
       icon: <HistoryIcon className="w-5 h-5" />,
       path: "/audit-log",
-      roles: ["super_admin", "admin"],
-    },
+      allowedRoles: ["super_admin", "admin"]
+    }
   ];
 
   return (
@@ -137,35 +138,33 @@ function Layout() {
           {/* Scrollable Navigation */}
           <div className="flex-1 overflow-y-auto">
             <nav className="mt-5 px-2">
-              {menuItems.map(
-                (item) =>
-                  (!item.roles || item.roles.includes(user?.role)) && (
-                    <button
-                      key={item.text}
-                      onClick={() => {
-                        navigate(item.path);
-                        setIsSidebarOpen(false);
-                      }}
-                      className={`
-                                            w-full flex items-center space-x-2
-                                            px-4 py-3 my-1 rounded-md
-                                            text-gray-700 hover:bg-green-50
-                                            hover:text-green-900
-                                            transition-colors duration-200
-                                            active:bg-green-100
-                                            focus:outline-none focus:ring-2 focus:ring-green-500
-                                            ${
-                                              location.pathname === item.path
-                                                ? "bg-green-50 text-green-900"
-                                                : ""
-                                            }
-                                        `}
-                    >
-                      {item.icon}
-                      <span>{item.text}</span>
-                    </button>
-                  )
-              )}
+              {menuItems
+                .filter(item => {
+                  const roles = item.allowedRoles || item.roles;
+                  return roles ? roles.includes(user?.role) : true;
+                })
+                .map(item => (
+                  <button
+                    key={item.path}
+                    onClick={() => {
+                      navigate(item.path);
+                      setIsSidebarOpen(false);
+                    }}
+                    className={`
+                      w-full flex items-center space-x-2
+                      px-4 py-3 my-1 rounded-md
+                      text-gray-700 hover:bg-green-50
+                      hover:text-green-900
+                      transition-colors duration-200
+                      active:bg-green-100
+                      focus:outline-none focus:ring-2 focus:ring-green-500
+                      ${location.pathname === item.path ? "bg-green-50 text-green-900" : ""}
+                    `}
+                  >
+                    {item.icon}
+                    <span>{item.text || item.label}</span>
+                  </button>
+                ))}
             </nav>
           </div>
 

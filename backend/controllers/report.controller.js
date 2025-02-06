@@ -9,10 +9,10 @@ const exportReport = async (req, res) => {
     try {
         const { startDate, endDate, reportType, format = 'excel' } = req.query;
         
-        // Get user's checkpost filter
+        // Get user's checkpost filter based on role
         const checkpostFilter = ['super_admin', 'admin'].includes(req.user.role) 
             ? {} 
-            : { checkpost: req.user.checkpost };
+            : { checkpost: req.user.checkpost._id }; // Ensure we use the checkpost ID
 
         let data;
         switch (reportType) {
@@ -29,19 +29,24 @@ const exportReport = async (req, res) => {
                 return res.status(400).json({ message: 'Invalid report type' });
         }
 
+        // Add checkpost info to the report title for regular users
+        const reportTitle = req.user.role === 'user' 
+            ? `${reportType} - ${req.user.checkpost.name}`
+            : reportType;
+
         // Generate and send report based on format
         switch (format.toLowerCase()) {
             case 'excel':
-                await generateExcelReport(res, data, reportType);
+                await generateExcelReport(res, data, reportTitle);
                 break;
             case 'csv':
-                await generateCSVReport(res, data, reportType);
+                await generateCSVReport(res, data, reportTitle);
                 break;
             case 'pdf':
-                await exportToPDF(res, data, reportType);
+                await generatePDFReport(res, data, reportTitle);
                 break;
             default:
-                res.status(400).json({ message: 'Unsupported format' });
+                return res.status(400).json({ message: 'Invalid format type' });
         }
     } catch (error) {
         console.error('Report generation error:', error);
@@ -151,12 +156,12 @@ const generateVehicleTypeReport = async (startDate, endDate, checkpostFilter) =>
     return await Vehicle.aggregate(pipeline);
 };
 
-const generateExcelReport = async (res, data, reportType) => {
+const generateExcelReport = async (res, data, reportTitle) => {
     const workbook = new excel.Workbook();
     const worksheet = workbook.addWorksheet('Report');
 
     // Configure headers based on report type
-    switch (reportType) {
+    switch (reportTitle) {
         case 'checkpost_entries':
             worksheet.columns = [
                 { header: 'Checkpost', key: 'checkpostName', width: 20 },
@@ -206,7 +211,7 @@ const generateExcelReport = async (res, data, reportType) => {
     );
     res.setHeader(
         'Content-Disposition',
-        `attachment; filename=${reportType}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+        `attachment; filename=${reportTitle}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
     );
 
     // Send the workbook
@@ -214,7 +219,7 @@ const generateExcelReport = async (res, data, reportType) => {
     res.end();
 };
 
-const generateCSVReport = async (res, data, reportType) => {
+const generateCSVReport = async (res, data, reportTitle) => {
     const workbook = new excel.Workbook();
     const worksheet = workbook.addWorksheet('Report');
 
@@ -225,7 +230,7 @@ const generateCSVReport = async (res, data, reportType) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader(
         'Content-Disposition',
-        `attachment; filename=${reportType}_${format(new Date(), 'yyyy-MM-dd')}.csv`
+        `attachment; filename=${reportTitle}_${format(new Date(), 'yyyy-MM-dd')}.csv`
     );
 
     // Write to response
@@ -233,21 +238,21 @@ const generateCSVReport = async (res, data, reportType) => {
     res.end();
 };
 
-const exportToPDF = async (res, data, reportType) => {
+const generatePDFReport = async (res, data, reportTitle) => {
     try {
         const doc = new PDFDocument({ margin: 30 });
 
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader(
             "Content-Disposition",
-            `attachment; filename=report-${reportType}-${format(new Date(), "yyyy-MM-dd")}.pdf`
+            `attachment; filename=report-${reportTitle}-${format(new Date(), "yyyy-MM-dd")}.pdf`
         );
 
         // Pipe the PDF output directly to the response
         doc.pipe(res);
 
         // Title
-        doc.fontSize(18).text(`Report: ${reportType}`, { align: "center" }).moveDown(1);
+        doc.fontSize(18).text(`Report: ${reportTitle}`, { align: "center" }).moveDown(1);
 
         if (data.length > 0) {
             // Add table headers
