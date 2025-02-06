@@ -33,7 +33,7 @@ const vehicleController = {
       if (checkVehicleNumber) {
         return res.status(400).json({
           success: false,
-          message: `Vehicle already entered today at ${checkVehicleNumber.checkpost.name}`,
+          message: `Vehicle already entered today at ${checkVehicleNumber.checkpost.name} at ${checkVehicleNumber.createdAt.toLocaleString()}`,
         });
       }
 
