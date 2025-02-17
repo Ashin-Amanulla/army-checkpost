@@ -77,6 +77,12 @@ function Layout() {
       icon: <HistoryIcon className="w-5 h-5" />,
       path: "/audit-log",
       allowedRoles: ["super_admin", "admin"]
+    },
+    {
+      label: "Settings",
+      icon: <SettingsIcon className="w-5 h-5" />,
+      path: "/settings",
+      allowedRoles: ["super_admin"]
     }
   ];
 

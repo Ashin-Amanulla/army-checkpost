@@ -37,7 +37,7 @@ import {
   Edit,
   Delete,
 } from "@mui/icons-material";
-import { vehicleAPI, checkpostAPI } from "../services/api";
+import { vehicleAPI, checkpostAPI, settingsAPI } from "../services/api";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import toast from "react-hot-toast";
@@ -230,6 +230,19 @@ function VehicleList() {
     }
   };
 
+  const handleVerify = async (vehicleNumber) => {
+    try {
+      const response = await settingsAPI.verifyVehicle(vehicleNumber);
+      if (response.success) {
+        setSelectedVehicle( response.data);
+        setDetailsOpen(true);
+      }
+    } catch (error) {
+      console.error("Error verifying vehicle:", error);
+      toast.error("Failed to verify vehicle");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -362,6 +375,7 @@ function VehicleList() {
                       onDelete={() => handleDeleteDetails(vehicle._id)}
                       onDispatchChange={handleDispatchChange}
                       onEdit={handleEdit}
+                      onVerify={handleVerify}
                     />
                   </div>
                 ))}
@@ -506,130 +520,85 @@ function VehicleList() {
 
       {/* Details Modal */}
       <Modal
-        open={detailsOpen}
-        onClose={() => setDetailsOpen(false)}
-        title={`Vehicle Entry - ${selectedVehicle?.vehicleNumber || ""}`}
-      >
-        {selectedVehicle && (
-          <div className="space-y-6">
-            {/* Vehicle Photo */}
-            {selectedVehicle.photoUrl && (
-              <div className="relative h-64 bg-gray-100 rounded-lg overflow-hidden">
-                <img
-                  src={selectedVehicle.photoUrl}
-                  alt={selectedVehicle.vehicleNumber}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            )}
+      open={detailsOpen}
+      onClose={() => setDetailsOpen(false)}
+      title={`Vehicle Entry - ${selectedVehicle?.rc_regn_no || ""}`}
+    >
+      {selectedVehicle && (
+        <div className="space-y-6">
+          {/* Vehicle Photo */}
+          {selectedVehicle.photoUrl && (
+            <div className="relative h-64 bg-gray-100 rounded-lg overflow-hidden">
+              <img
+                src={selectedVehicle.photoUrl}
+                alt={selectedVehicle.rc_regn_no}
+                className="w-full h-full object-contain"
+              />
+            </div>
+          )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Vehicle Information */}
-              <div className="col-span-2">
-                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
-                  Vehicle Information
-                </h3>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Vehicle Number
-                </label>
-                <p className="mt-1 text-lg font-medium">
-                  {selectedVehicle.vehicleNumber}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Vehicle Type
-                </label>
-                <p className="mt-1 text-lg font-medium">
-                  {selectedVehicle.vehicleType?.name}
-                </p>
-              </div>
-
-              {/* Entry Information */}
-              <div className="col-span-2">
-                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
-                  Entry Information
-                </h3>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Checkpost
-                </label>
-                <p className="mt-1 text-lg font-medium">
-                  {selectedVehicle.checkpost?.name} (
-                  {selectedVehicle.checkpost?.code})
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Entry Time
-                </label>
-                <p className="mt-1 text-lg font-medium">
-                  {format(
-                    new Date(selectedVehicle.createdAt),
-                    "dd/MM/yyyy HH:mm"
-                  )}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Entered By
-                </label>
-                <p className="mt-1 text-lg font-medium">
-                  {selectedVehicle.createdBy?.fullName ||
-                    selectedVehicle.createdBy?.username}
-                </p>
-              </div>
-
-              {/* Driver Information */}
-              <div className="col-span-2">
-                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
-                  Driver Information
-                </h3>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Driver Name
-                </label>
-                <p className="mt-1 text-lg font-medium">
-                  {selectedVehicle.driverName}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Driver Phone
-                </label>
-                <p className="mt-1 text-lg font-medium">
-                  {selectedVehicle.driverPhone}
-                </p>
-              </div>
-
-              {/* Purpose */}
-              <div className="col-span-2">
-                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
-                  Additional Details
-                </h3>
-              </div>
-              <div className="col-span-2">
-                <label className="text-sm font-medium text-gray-500">
-                  Remarks
-                </label>
-                <p className="mt-1 text-lg font-medium">
-                  {selectedVehicle.purpose}
-                </p>
-              </div>
+          {/* Vehicle Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="col-span-2">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
+                Vehicle Information
+              </h3>
             </div>
 
-            <div className="flex justify-end mt-6 pt-4 border-t">
-              <Button variant="secondary" onClick={() => setDetailsOpen(false)}>
-                Close
-              </Button>
+            <InfoRow label="Vehicle Number" value={selectedVehicle.rc_regn_no} />
+            <InfoRow label="Registration Date" value={selectedVehicle.rc_regn_dt} />
+            <InfoRow label="Registered At" value={selectedVehicle.rc_registered_at} />
+            <InfoRow label="Fit Upto" value={selectedVehicle.rc_fit_upto} />
+            <InfoRow label="Tax Upto" value={selectedVehicle.rc_tax_upto} />
+            <InfoRow label="Vehicle Category" value={selectedVehicle.rc_vch_catg} />
+            <InfoRow label="Vehicle Class" value={selectedVehicle.rc_vh_class_desc} />
+            <InfoRow label="Manufacturer" value={selectedVehicle.rc_maker_desc} />
+            <InfoRow label="Model" value={selectedVehicle.rc_maker_model} />
+            <InfoRow label="Color" value={selectedVehicle.rc_color} />
+            <InfoRow label="Fuel Type" value={selectedVehicle.rc_fuel_desc} />
+
+            {/* Insurance Information */}
+            <div className="col-span-2">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
+                Insurance Information
+              </h3>
             </div>
+            <InfoRow label="Insurance Company" value={selectedVehicle.rc_insurance_comp} />
+            <InfoRow label="Policy Number" value={selectedVehicle.rc_insurance_policy_no} />
+            <InfoRow label="Insurance Valid Upto" value={selectedVehicle.rc_insurance_upto} />
+
+            {/* Owner Information */}
+            <div className="col-span-2">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
+                Owner Information
+              </h3>
+            </div>
+            <InfoRow label="Owner Name" value={selectedVehicle.rc_owner_name} />
+            <InfoRow label="Father's Name" value={selectedVehicle.rc_f_name} />
+            <InfoRow label="Permanent Address" value={selectedVehicle.rc_permanent_address} />
+
+            {/* Additional Details */}
+            <div className="col-span-2">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
+                Additional Details
+              </h3>
+            </div>
+            <InfoRow label="Financer" value={selectedVehicle.rc_financer} />
+            <InfoRow label="Chassis Number" value={selectedVehicle.rc_chasi_no} />
+            <InfoRow label="Engine Number" value={selectedVehicle.rc_eng_no} />
+            <InfoRow label="Manufacture Month/Year" value={selectedVehicle.rc_manu_month_yr} />
+            <InfoRow label="PUCC Upto" value={selectedVehicle.rc_pucc_upto} />
+
           </div>
-        )}
-      </Modal>
+
+          <div className="flex justify-end mt-6 pt-4 border-t">
+            <Button variant="secondary" onClick={() => setDetailsOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
 
       {editingVehicle && (
         <EditVehicleModal
@@ -641,5 +610,13 @@ function VehicleList() {
     </div>
   );
 }
+
+
+const InfoRow = ({ label, value }) => (
+  <div>
+    <label className="text-sm font-medium text-gray-500">{label}</label>
+    <p className="mt-1 text-lg font-medium">{value || "--"}</p>
+  </div>
+);
 
 export default VehicleList;

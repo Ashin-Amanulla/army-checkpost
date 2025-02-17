@@ -18,6 +18,7 @@ const auditLogRoutes = require('./routes/auditLog.routes');
 const reportRoutes = require('./routes/report.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const userRoutes = require('./routes/user.routes');
+const settingsRoutes = require('./routes/settings.routes');
 
 const app = express();
 
@@ -42,7 +43,7 @@ app.use('/api/vehicletypes', vehicleTypeRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-
+app.use('/api/settings', settingsRoutes);
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);

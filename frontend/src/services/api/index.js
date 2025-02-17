@@ -4,6 +4,8 @@ import * as checkpostAPI from './checkpost';
 import * as dashboardAPI from './dashboard';
 import * as auditAPI from './audit';
 import * as reportsAPI from './reports';
+import { settingsAPI } from './settings';
+// import { auditLogAPI } from './auditLog';
 
 export {
   authAPI,
@@ -11,5 +13,7 @@ export {
   checkpostAPI,
   dashboardAPI,
   auditAPI,
-  reportsAPI
+  reportsAPI,
+  settingsAPI,
+  // auditLogAPI
 }; 
