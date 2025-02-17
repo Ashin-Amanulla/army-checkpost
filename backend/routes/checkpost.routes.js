@@ -32,10 +32,13 @@ const wrapWithAudit = (handler, action) => {
 };
 
 router.use(protect);
-router.use(authorize(['super_admin', 'admin']));
 
-router.post('/', wrapWithAudit(createCheckpost, 'CHECKPOST_CREATE'));
 router.get('/', wrapWithAudit(getCheckposts, 'VIEW_CHECKPOSTS'));
+
+router.use(authorize(['super_admin', 'admin']));
+router.post('/', wrapWithAudit(createCheckpost, 'CHECKPOST_CREATE'));
+router.use(authorize(['super_admin']));
+
 router.put('/:id', wrapWithAudit(updateCheckpost, 'CHECKPOST_UPDATE'));
 router.delete('/:id', wrapWithAudit(deleteCheckpost, 'CHECKPOST_DELETE'));
 
