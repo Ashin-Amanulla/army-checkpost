@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const SiteVisit = require('../models/SiteVisit');
 
 exports.protect = async (req, res, next) => {
     try {
@@ -19,6 +20,17 @@ exports.protect = async (req, res, next) => {
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             req.user = await User.findById(decoded.id).populate('checkpost');
+
+            // Track site visit
+            await SiteVisit.create({
+                user: req.user._id,
+                role: req.user.role
+            });
+
+            // Update last login
+            await User.findByIdAndUpdate(req.user._id, {
+                lastLogin: new Date()
+            });
 
             console.log('User role:', req.user.role);
             next();

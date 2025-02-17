@@ -9,10 +9,11 @@ import {
   History,
   TrendingUp,
   LocationOn,
+  Person,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { Card, Button, StatsCard } from "../components/ui";
+import { Card, Button, StatsCard, Tabs } from "../components/ui";
 import {
   BarChart,
   Bar,
@@ -39,35 +40,56 @@ function Dashboard() {
     monthlyTotal: 0,
     vehicleTypeData: [],
     weeklyTrends: [],
-    hourlyDistribution: [],
-    checkpostAnalytics: [],
-    activeCheckposts: 0,
     checkpostDistribution: [],
+    lastLogins: [],
+    siteVisits: { total: 0, admin: 0, user: 0 },
+    adminLastLogins: [],
   });
+  const [timeRange, setTimeRange] = useState("alltime");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [timeframe, setTimeframe] = useState("daily");
-  const [timeRange, setTimeRange] = useState('daily'); // 'daily', 'weekly', 'monthly'
 
-  const COLORS = ["#16a34a", "#2563eb", "#d97706", "#dc2626", "#7c3aed"];
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const { data } = await dashboardAPI.getStats();
-        console.log(data);
-        if (data) {
-          setStats(data);
-        }
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchDashboardData();
+    // Set up auto-refresh every 5 minutes
+    const interval = setInterval(fetchDashboardData, 300000);
+    return () => clearInterval(interval);
+  }, [timeRange]);
 
-    fetchStats();
-  }, []);
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await dashboardAPI.getStats(timeRange);
+      setStats(response.data);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const timeTabs = [
+    { label: "All Time", value: "alltime" },
+    { label: "Monthly", value: "monthly" },
+    { label: "Weekly", value: "weekly" },
+  ];
+
+  const getActivityDescription = (action) => {
+    switch (action) {
+      case "USER_LOGIN":
+        return "Logged in";
+      case "VEHICLE_ENTRY":
+        return "Created vehicle entry";
+      case "VEHICLE_EXIT":
+        return "Marked vehicle exit";
+      case "USER_UPDATE":
+        return "Updated user information";
+      default:
+        return action.replace(/_/g, " ").toLowerCase();
+    }
+  };
 
   if (loading) {
     return (
@@ -78,174 +100,250 @@ function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatsCard
-          title="Today's Entries"
-          value={stats.todayEntries}
-          icon={DirectionsCar}
-        />
-        <StatsCard
-          title="Active Checkposts"
-          value={stats.activeCheckposts}
-          icon={LocationOn}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total Entries"
           value={stats.totalEntries}
-          subtitle="All time"
-          icon={Assessment}
+          icon={DirectionsCar}
         />
+        <StatsCard
+          title="Active Vehicles"
+          value={stats.activeVehicles}
+          icon={ExitToApp}
+        />
+        <StatsCard
+          title="Today's Entries"
+          value={stats.todayEntries}
+          icon={Today}
+        />
+        <Card className="p-4">
+          <h3 className="text-lg font-medium mb-4">Site Visits</h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Visits</span>
+              <span className="text-xl font-semibold">
+                {stats.siteVisits.total}
+              </span>
+            </div>
+            {/* <div className="flex justify-between items-center">
+              <span className="text-gray-600">Admin Visits</span>
+              <span className="text-green-600 font-medium">
+                {stats.siteVisits.admin}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">User Visits</span>
+              <span className="text-blue-600 font-medium">
+                {stats.siteVisits.user}
+              </span>
+            </div> */}
+          </div>
+        </Card>
+        {/* <Card className="p-4">
+          <h3 className="text-lg font-medium mb-4">Admin Last Logins</h3>
+          <div className="space-y-3">
+            {Array.isArray(stats.adminLastLogins) &&
+              stats.adminLastLogins.map((admin) => (
+                <div
+                  key={admin._id}
+                  className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
+                >
+                  <div className="p-2 bg-green-50 rounded-full">
+                    <Person className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{admin.username}</p>
+                    <p className="text-xs text-gray-500">
+                      {format(new Date(admin.lastLogin), "dd/MM/yyyy HH:mm")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            {Array.isArray(stats.adminLastLogins) &&
+              stats.adminLastLogins.length === 0 && (
+                <p className="text-sm text-gray-500 text-center">
+                  No admin login history
+                </p>
+              )}
+          </div>
+        </Card> */}
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Weekly Summary Chart */}
-        <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Weekly Entry Summary</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.weeklyTrends}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => format(new Date(value), 'dd/MM')}
-                />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip
-                  formatter={(value) => [value, 'Entries']}
-                  labelFormatter={(label) => format(new Date(label), 'dd MMM yyyy')}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="count" 
-                  stroke="#16a34a" 
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Checkpost Distribution */}
+        <Card>
+          <div className="p-4">
+            <h3 className="text-lg font-medium mb-4">
+              Checkpost Entry Distribution
+            </h3>
+            <Tabs
+              tabs={timeTabs}
+              activeTab={timeRange}
+              onChange={setTimeRange}
+              className="mb-4"
+            />
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.checkpostDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar
+                    dataKey="value"
+                    fill="#16a34a"
+                    stroke="#047857"
+                    radius={[4, 4, 0, 0]}
+                  >
+                    {stats.checkpostDistribution.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.active ? "#16a34a" : "#9ca3af"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {stats.checkpostDistribution.length === 0 && (
+              <div className="flex justify-center items-center h-64">
+                <p className="text-gray-500">No data available</p>
+              </div>
+            )}
           </div>
         </Card>
 
-        {/* Checkpost Distribution Chart with Tabs */}
-        <Card className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-medium text-gray-900">Checkpost Entry Distribution</h3>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setTimeRange('daily')}
-                className={`px-3 py-1 text-sm rounded-md ${
-                  timeRange === 'daily'
-                    ? 'bg-green-100 text-green-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                Daily
-              </button>
-              <button
-                onClick={() => setTimeRange('weekly')}
-                className={`px-3 py-1 text-sm rounded-md ${
-                  timeRange === 'weekly'
-                    ? 'bg-green-100 text-green-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                Weekly
-              </button>
-              <button
-                onClick={() => setTimeRange('monthly')}
-                className={`px-3 py-1 text-sm rounded-md ${
-                  timeRange === 'monthly'
-                    ? 'bg-green-100 text-green-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                Monthly
-              </button>
+        {/* Vehicle Type Distribution */}
+        <Card>
+          <div className="p-4">
+            <h3 className="text-lg font-medium mb-4">
+              Vehicle Type Distribution
+            </h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={stats.vehicleTypeData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label
+                  >
+                    {stats.vehicleTypeData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={stats[`${timeRange}CheckpostDistribution`]}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#16a34a"
-                  label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                >
-                  {stats[`${timeRange}CheckpostDistribution`]?.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={`hsl(142, ${30 + index * 20}%, ${40 + index * 10}%)`} 
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            {stats.vehicleTypeData.length === 0 && (
+              <div className="flex justify-center items-center h-64">
+                <p className="text-gray-500">No data available</p>
+              </div>
+            )}
           </div>
         </Card>
       </div>
 
-      {/* Recent Entries Table */}
-      <Card className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Recent Entries</h3>
-          <button
-            onClick={() => navigate("/vehicle-list")}
-            className="text-sm text-green-600 hover:text-green-700"
-          >
-            View All
-          </button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Vehicle Number
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Checkpost
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Time
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {stats.recentEntries.map((entry) => (
-                <tr key={entry._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {entry.vehicleNumber}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {entry.vehicleType?.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {entry.checkpost?.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {format(new Date(entry.createdAt), "dd/MM/yyyy HH:mm")}
-                  </td>
-                </tr>
+      {/* Recent Activity and Last Logins */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Recent Entries */}
+        <Card>
+          <div className="p-4">
+            <h3 className="text-lg font-medium mb-4">Recent Entries</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Vehicle Number
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Checkpost
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Time
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {stats.recentEntries.map((entry) => (
+                    <tr key={entry._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {entry.vehicleNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {entry.vehicleType?.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {entry.checkpost?.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {format(new Date(entry.createdAt), "dd/MM/yyyy HH:mm")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {stats.recentEntries.length === 0 && (
+              <div className="text-center py-4">
+                <p className="text-gray-500">No recent entries</p>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Last Logins */}
+        <Card>
+          <div className="p-4">
+            <h3 className="text-lg font-medium mb-4">Recent User Activity</h3>
+            <div className="space-y-4">
+              {stats.lastLogins.map((activity) => (
+                <div
+                  key={activity._id}
+                  className="flex items-center space-x-4 p-2 hover:bg-gray-50 rounded-lg"
+                >
+                  <div className="p-2 bg-green-50 rounded-full">
+                    <Person className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {activity.username}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {getActivityDescription(activity.action)}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {format(new Date(activity.timestamp), "dd/MM/yyyy HH:mm")}
+                    </p>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+              {(!Array.isArray(stats.lastLogins) ||
+                stats.lastLogins.length === 0) && (
+                <p className="text-sm text-gray-500 text-center">
+                  No recent activity
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
