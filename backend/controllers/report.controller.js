@@ -236,8 +236,20 @@ const generateCSVReport = async (res, data, reportTitle) => {
     const workbook = new excel.Workbook();
     const worksheet = workbook.addWorksheet('Report');
 
-    // Configure headers and data similar to Excel report
-    // ... (same configuration as in generateExcelReport)
+    // Configure headers and data
+    switch (reportTitle) {
+        case 'checkpost_entries':
+            worksheet.columns = [
+                { header: 'Checkpost', key: 'checkpostName', width: 20 },
+                { header: 'Total Entries', key: 'totalEntries', width: 15 }
+            ];
+            worksheet.addRows(data.map(item => ({
+                checkpostName: item.checkpostName,
+                totalEntries: item.totalEntries
+            })));
+            break;
+        // Add other report cases if needed
+    }
 
     // Set response headers for CSV
     res.setHeader('Content-Type', 'text/csv');
@@ -246,48 +258,68 @@ const generateCSVReport = async (res, data, reportTitle) => {
         `attachment; filename=${reportTitle}_${format(new Date(), 'yyyy-MM-dd')}.csv`
     );
 
-    // Write to response
-    await workbook.csv.write(res);
-    res.end();
+    // Write CSV to buffer, then send the buffer to response
+    const csvBuffer = await workbook.csv.writeBuffer();
+    res.send(csvBuffer);
 };
 
 const generatePDFReport = async (res, data, reportTitle) => {
     try {
+        const PDFDocument = require('pdfkit');
         const doc = new PDFDocument({ margin: 30 });
 
-        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader('Content-Type', 'application/pdf');
         res.setHeader(
-            "Content-Disposition",
-            `attachment; filename=report-${reportTitle}-${format(new Date(), "yyyy-MM-dd")}.pdf`
+            'Content-Disposition',
+            `attachment; filename=report-${reportTitle}-${new Date().toISOString().slice(0, 10)}.pdf`
         );
 
         // Pipe the PDF output directly to the response
         doc.pipe(res);
 
         // Title
-        doc.fontSize(18).text(`Report: ${reportTitle}`, { align: "center" }).moveDown(1);
+        doc.fontSize(20).text(`Report: ${reportTitle}`, { align: 'center' }).moveDown(1);
 
         if (data.length > 0) {
-            // Add table headers
-            const headers = Object.keys(data[0]);
-            doc.fontSize(12).text(headers.join(" | "), { underline: true }).moveDown(0.5);
+            // Table headers
+            doc.fontSize(14).text('Checkpost Name', { continued: true })
+                .text(' | Total Entries', { continued: true })
+                .text(' | Vehicles', { underline: true });
 
-            // Add data rows
             data.forEach(row => {
-                const values = Object.values(row).join(" | ");
-                doc.text(values).moveDown(0.2);
+                doc.moveDown(0.5);
+
+                // Basic information for each checkpost
+                doc.fontSize(12).text(`${row.checkpostName}`, { continued: true })
+                    .text(` | ${row.totalEntries}`, { continued: true })
+                    .text(' | ');
+
+                // Check if vehicles exist and format their display
+                if (Array.isArray(row.vehicles) && row.vehicles.length > 0) {
+                    row.vehicles.forEach(vehicle => {
+                        doc.text(`- Vehicle Number: ${vehicle.vehicleNumber}`, { indent: 20 });
+                        doc.text(`  Type: ${vehicle.vehicleType}`, { indent: 20 });
+                        doc.text(`  Driver: ${vehicle.driverName} (${vehicle.driverPhone})`, { indent: 20 });
+                        doc.text(`  Purpose: ${vehicle.purpose}`, { indent: 20 });
+                        doc.moveDown(0.3);
+                    });
+                } else {
+                    doc.text(`No vehicle entries`, { indent: 20 });
+                }
             });
         } else {
-            doc.text("No data available for this report.", { align: "center" }).moveDown(1);
+            doc.fontSize(12).text('No data available for this report.', { align: 'center' }).moveDown(1);
         }
 
         // Finalize the PDF and send response
         doc.end();
     } catch (error) {
-        console.error("PDF export error:", error);
-        res.status(500).json({ message: "Failed to export PDF report" });
+        console.error('PDF export error:', error);
+        res.status(500).json({ message: 'Failed to export PDF report' });
     }
 };
+
+
 
 module.exports = {
     exportReport
