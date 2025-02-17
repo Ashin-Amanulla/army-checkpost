@@ -15,9 +15,10 @@ const dashboardController = {
             const weekStart = startOfWeek(today);
             const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
+
             // Get user's checkpost filter
             const checkpostFilter = req.user.role === 'user'
-                ? { checkpost: req.user.checkpost }
+                ? { checkpost: req.user.checkpost._id }
                 : {};
 
             // Get time range filter based on query param
@@ -115,7 +116,6 @@ const dashboardController = {
             }));
 
             console.log('Combined Filter:', combinedFilter);
-            console.log('Checkpost Distribution:', checkpostDistribution);
 
             res.json({
                 success: true,
