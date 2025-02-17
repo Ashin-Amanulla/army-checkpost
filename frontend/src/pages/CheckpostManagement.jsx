@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Edit, Delete, Business } from "@mui/icons-material";
 import { checkpostAPI } from "../services/api";
 import toast from "react-hot-toast";
+import useStore from "../store/useStore";
+
 
 function CheckpostManagement() {
   const [checkposts, setCheckposts] = useState([]);
@@ -9,6 +11,7 @@ function CheckpostManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedCheckpost, setSelectedCheckpost] = useState(null);
+   const { user } = useStore();
   const [formData, setFormData] = useState({
     name: "",
     location: "",
@@ -138,8 +141,9 @@ function CheckpostManagement() {
                   </p>
                 </div>
 
-                <div className="mt-4 flex justify-end space-x-2 border-t pt-4">
-                  <button
+                {user?.role == "super_admin" && (
+                  <div className="mt-4 flex justify-end space-x-2 border-t pt-4">
+                    <button
                     onClick={() => {
                       setSelectedCheckpost(checkpost);
                       setFormData({
@@ -160,8 +164,9 @@ function CheckpostManagement() {
                     className="p-2 text-red-600 hover:bg-red-50 rounded-full"
                   >
                     <Delete className="w-5 h-5" />
-                  </button>
-                </div>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}

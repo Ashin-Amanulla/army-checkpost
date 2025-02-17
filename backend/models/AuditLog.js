@@ -12,6 +12,7 @@ const auditLogSchema = new mongoose.Schema({
     enum: [
       "VEHICLE_ENTRY",
       "VEHICLE_EXIT",
+      "VEHICLE_UPDATE",
       "USER_CREATE",
       "USER_UPDATE",
       "USER_DELETE",

@@ -102,17 +102,17 @@ function Login() {
           </button>
         </form>
 
-        <div className="text-center text-sm text-gray-600">Jai Hind 🇮🇳</div>
         <div className="text-center text-sm text-gray-600">
-          {new Date().getFullYear()} ©{" "}
-          <a
-            href="https://www.xyvin.com"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Xyvin
-          </a>{" "}
-          & NiMo
+          Jai Hind{" "}
+          <img
+            src="https://upload.wikimedia.org/wikipedia/en/4/41/Flag_of_India.svg"
+            alt="Indian Flag"
+            className="inline-block h-4 w-6 ml-1"
+          />
+        </div>
+
+        <div className="text-center text-sm text-gray-600">
+          {new Date().getFullYear()} © Xyvin & NiMo
         </div>
       </div>
     </div>

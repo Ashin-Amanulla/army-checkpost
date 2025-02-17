@@ -75,12 +75,16 @@ const vehicleController = {
         startDate,
         endDate,
         vehicleType,
+        vehicleNumber,
+        status,
         checkpost,
         search,
         page = 1,
         limit = 10,
       } = req.query;
+      console.log(req.query);
       let query = {};
+
 
       // Date filter
       if (startDate && endDate) {
@@ -92,6 +96,8 @@ const vehicleController = {
 
       // Other filters
       if (vehicleType) query.vehicleType = vehicleType;
+      if (vehicleNumber) query.vehicleNumber = vehicleNumber;
+      if (status) query.dispatch = status;
       if (checkpost) query.checkpost = checkpost;
       if (search) {
         query.$or = [
@@ -105,7 +111,11 @@ const vehicleController = {
         query.checkpost = req.user.checkpost;
       }
 
-      const skip = (page - 1) * limit;
+      const pageNumber = Math.max(Number(page) || 1, 1);
+      const limitNumber = Math.max(Number(limit) || 10, 1);
+
+
+      const skip = (pageNumber - 1) * limitNumber;
 
       const [entries, total] = await Promise.all([
         VehicleEntry.find(query)
@@ -114,9 +124,10 @@ const vehicleController = {
           .populate("createdBy", "username fullName")
           .sort("-createdAt")
           .skip(skip)
-          .limit(Number(limit)),
+          .limit(limitNumber),
         VehicleEntry.countDocuments(query),
       ]);
+
 
       res.json({
         success: true,
@@ -128,6 +139,7 @@ const vehicleController = {
         },
       });
     } catch (error) {
+      console.log(error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -300,6 +312,50 @@ const vehicleController = {
       });
     }
   },
+
+  updateVehicle: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { vehicleNumber, driverName, driverPhone, purpose } = req.body;
+      console.log('dasdas', req.body);
+
+      // Find vehicle and check if it exists
+      const vehicle = await VehicleEntry.findById(id);
+      if (!vehicle) {
+        return res.status(404).json({
+          success: false,
+          message: 'Vehicle entry not found'
+        });
+      }
+      // Update only allowed fields
+      const updatedVehicle = await VehicleEntry.findByIdAndUpdate(
+        id,
+        {
+          vehicleNumber,
+          driverName,
+          driverPhone,
+          purpose
+        },
+        { new: true }
+      )
+        .populate('vehicleType')
+        .populate('checkpost')
+        .populate('createdBy', 'username');
+
+
+
+      res.json({
+        success: true,
+        data: updatedVehicle
+      });
+    } catch (error) {
+      console.error('Error updating vehicle:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
 };
 
 module.exports = vehicleController;

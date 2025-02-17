@@ -48,4 +48,22 @@ export const deleteEntry = async (id) => {
     console.error('Error deleting vehicle:', error);
     throw error;
   }
-}; 
+};
+
+export const updateVehicle = async (id, data) => {
+  try {
+    const response = await axios.patch(`/api/vehicles/${id}`, data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const entries = {
+  createEntry,
+  getEntries,
+  getEntry,
+  updateEntry,
+  deleteEntry,
+  updateVehicle
+};

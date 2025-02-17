@@ -38,7 +38,7 @@ router.post('/',
 );
 
 router.put('/:id',
-    authorize(['admin', 'super_admin']),
+    authorize(['admin', 'super_admin','user']),
     wrapWithAudit(vehicleController.exitEntry, 'VEHICLE_EXIT')
 );
 
@@ -57,6 +57,11 @@ router.get('/history/:vehicleNumber',
 
 router.get('/:id',
     wrapWithAudit(vehicleController.getEntryById, 'VIEW_VEHICLES')
+);
+
+router.patch(
+    '/:id',
+    wrapWithAudit(vehicleController.updateVehicle, 'VEHICLE_UPDATE')
 );
 
 module.exports = router; 

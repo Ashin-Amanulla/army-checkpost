@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -55,6 +56,7 @@ import {
 } from "../components/ui";
 import { useTheme } from "../contexts/ThemeContext";
 import { format } from "date-fns";
+import EditVehicleModal from "../components/EditVehicleModal";
 
 function VehicleList() {
   const { theme } = useTheme();
@@ -67,6 +69,8 @@ function VehicleList() {
     startDate: null,
     endDate: null,
     vehicleType: "",
+    checkpost: "",
+    vehicleNumber: "",
     status: "",
     search: "",
   });
@@ -75,8 +79,11 @@ function VehicleList() {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { user } = useStore();
+  const [editingVehicle, setEditingVehicle] = useState(null);
+  const [checkposts, setCheckposts] = useState([]);
 
   useEffect(() => {
+    fetchCheckposts();
     fetchVehicleTypes();
     fetchVehicles();
   }, [page, rowsPerPage]);
@@ -97,7 +104,19 @@ function VehicleList() {
   const fetchVehicles = async () => {
     setLoading(true);
     try {
-      const response = await vehicleAPI.entries.getEntries(filters);
+      const queryParams = {
+        ...filters,
+        page,
+        limit: rowsPerPage,
+        startDate: filters.startDate
+          ? format(filters.startDate, "yyyy-MM-dd")
+          : undefined,
+        endDate: filters.endDate
+          ? format(filters.endDate, "yyyy-MM-dd")
+          : undefined,
+      };
+
+      const response = await vehicleAPI.entries.getEntries(queryParams);
       if (response.success) {
         setVehicles(response.data);
       }
@@ -109,8 +128,19 @@ function VehicleList() {
     }
   };
 
+  const fetchCheckposts = async () => {
+    try {
+      const response = await checkpostAPI.getAll();
+      if (response) {
+        setCheckposts(response);
+      }
+    } catch (error) {
+      console.error("Error fetching checkposts:", error);
+      toast.error("Failed to load checkposts");
+    }
+  };
 
-  const handleDispatchChange = async (id, status)=>{
+  const handleDispatchChange = async (id, status) => {
     try {
       const response = await vehicleAPI.entries.updateEntry(id, {
         status,
@@ -120,17 +150,14 @@ function VehicleList() {
         toast.success("Dispatch changed successfully");
         setVehicles((prevVehicles) =>
           prevVehicles.map((vehicle) =>
-            vehicle._id === id
-              ? { ...vehicle, dispatch: status }
-              : vehicle
+            vehicle._id === id ? { ...vehicle, dispatch: status } : vehicle
           )
         );
       }
-      
     } catch (error) {
       console.error("Error changing dispatch:", error);
     }
-  }
+  };
 
   const handleSearch = () => {
     setPage(0);
@@ -167,7 +194,7 @@ function VehicleList() {
     }
   };
 
-  const handleViewDetails = async (id) => {
+  const handleDeleteDetails = async (id) => {
     try {
       if (window.confirm("Are you sure you want to delete this entry?")) {
         const res = await vehicleAPI.entries.deleteEntry(id);
@@ -187,6 +214,22 @@ function VehicleList() {
       : "bg-gray-100 text-gray-800 border-gray-200";
   };
 
+  const handleEdit = (vehicle) => {
+    setEditingVehicle(vehicle);
+  };
+
+  const handleSaveEdit = async (formData) => {
+    try {
+      await vehicleAPI.entries.updateVehicle(editingVehicle._id, formData);
+      toast.success("Vehicle entry updated successfully");
+      setEditingVehicle(null);
+      fetchVehicles(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating vehicle:", error);
+      toast.error(error.response?.data?.message || "Error updating vehicle");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -195,7 +238,7 @@ function VehicleList() {
         icon={<DirectionsCar className="w-6 h-6" />}
         actions={
           <div className="flex items-center gap-2">
-            {/* <ViewToggle view={viewMode} onToggle={setViewMode} /> */}
+            <ViewToggle view={viewMode} onToggle={setViewMode} />
             <Button
               variant="secondary"
               onClick={() => setShowFilters(!showFilters)}
@@ -208,18 +251,19 @@ function VehicleList() {
         }
       />
 
-      {/* Filters Section */}
       {showFilters && (
         <Card className="bg-white border border-gray-200 shadow-md p-6 rounded-lg">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Date Range Filter */}
             <DateRangeFilter
               startDate={filters.startDate}
               endDate={filters.endDate}
-              onChange={(field, value) =>
-                setFilters({ ...filters, [field]: value })
+              onStartDateChange={(date) =>
+                setFilters({ ...filters, startDate: date })
               }
-              className="w-full"
+              onEndDateChange={(date) =>
+                setFilters({ ...filters, endDate: date })
+              }
             />
 
             {/* Vehicle Type Filter */}
@@ -235,31 +279,53 @@ function VehicleList() {
               placeholder="All Vehicle Types"
               className="border-gray-300 rounded-lg w-full"
             />
+
+            {/* Checkpost Filter */}
+            <Select
+              value={filters.checkpost}
+              onChange={(value) => setFilters({ ...filters, checkpost: value })}
+              options={checkposts.map((cp) => ({
+                value: cp._id,
+                label: cp.name,
+              }))}
+              placeholder="All Checkposts"
+              className="border-gray-300 rounded-lg w-full"
+            />
+
+            {/* Status Filter */}
+            <Select
+              value={filters.status}
+              onChange={(value) => setFilters({ ...filters, status: value })}
+              options={[
+                { value: "", label: "All " },
+
+                { value: "true", label: "yes" },
+                { value: "false", label: "no" },
+              ]}
+              placeholder="Dispatch Status"
+              className="border-gray-300 rounded-lg w-full"
+            />
           </div>
 
-          {/* Button Section */}
-          <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
+          <div className="flex justify-end mt-4 space-x-2">
             <Button
-              variant="outline"
-              className="w-full sm:w-auto border-gray-300"
-              onClick={() =>
+              variant="secondary"
+              onClick={() => {
                 setFilters({
                   startDate: null,
                   endDate: null,
                   vehicleType: "",
+                  checkpost: "",
+                  vehicleNumber: "",
                   status: "",
-                })
-              }
+                  search: "",
+                });
+                fetchVehicles();
+              }}
             >
-              Clear
+              Reset
             </Button>
-            <Button
-              variant="primary"
-              className="w-full sm:w-auto"
-              onClick={handleSearch}
-            >
-              Apply Filters
-            </Button>
+            <Button onClick={handleSearch}>Apply Filters</Button>
           </div>
         </Card>
       )}
@@ -284,28 +350,158 @@ function VehicleList() {
           }
         />
       ) : (
-        <div
-          className={
-            viewMode === "grid"
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-              : "space-y-4"
-          }
-        >
-          {Array.isArray(vehicles) &&
-            vehicles.map((vehicle) => (
-              <VehicleCard
-                key={vehicle._id}
-                vehicle={vehicle}
-                onView={() => handleViewDetails(vehicle._id)}
-                onDispatchChange={handleDispatchChange}
-                onExit={
-                  vehicle.status === "entered"
-                    ? () => handleExit(vehicle._id)
-                    : undefined
-                }
-              />
-            ))}
-        </div>
+        <>
+          {/* Grid View */}
+          {viewMode === "grid" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.isArray(vehicles) &&
+                vehicles.map((vehicle) => (
+                  <div key={vehicle._id} className="bg-white">
+                    <VehicleCard
+                      vehicle={vehicle}
+                      onDelete={() => handleDeleteDetails(vehicle._id)}
+                      onDispatchChange={handleDispatchChange}
+                      onEdit={handleEdit}
+                    />
+                  </div>
+                ))}
+            </div>
+          ) : (
+            // Table View
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Image
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Vehicle
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Driver
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Checkpost
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Remarks
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Entry Time
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Dispatched
+                      </th>
+
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {vehicles.map((vehicle) => (
+                      <tr key={vehicle._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <img
+                            src={vehicle.photoUrl || "/default-vehicle.jpg"}
+                            alt={vehicle.vehicleNumber}
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {vehicle.vehicleNumber}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {vehicle.driverName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {vehicle.checkpost?.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {vehicle.purpose}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {format(
+                            new Date(vehicle.createdAt),
+                            "dd/MM/yyyy HH:mm"
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {vehicle.dispatch
+                            ? format(
+                                new Date(vehicle?.dispatchDate),
+                                "dd/MM/yyyy HH:mm"
+                              )
+                            : "No"}
+                        </td>
+
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {/* Dispatch Toggle */}
+                          <div className=" flex justify-between items-center ">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-gray-500">Dispatch:</span>
+                              <label className="flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  className="hidden"
+                                  checked={vehicle.dispatch}
+                                  onChange={() =>
+                                    handleDispatchChange(
+                                      vehicle._id,
+                                      !vehicle.dispatch
+                                    )
+                                  }
+                                />
+                                <div
+                                  className={`w-12 h-6 flex items-center bg-gray-300 rounded-full p-1 transition ${
+                                    vehicle.dispatch
+                                      ? "bg-green-500"
+                                      : "bg-gray-400"
+                                  }`}
+                                >
+                                  <div
+                                    className={`bg-white w-5 h-5 rounded-full shadow-md transform transition ${
+                                      vehicle.dispatch ? "translate-x-6" : ""
+                                    }`}
+                                  ></div>
+                                </div>
+                              </label>
+                            </div>
+
+                            {user?.role && (
+                              <div className="flex space-x-2 ms-6">
+                                <button
+                                  onClick={() => handleEdit(vehicle)}
+                                  className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+                                  title="Edit Entry"
+                                >
+                                  <Edit className="w-5 h-5 text-blue-600" />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleDeleteDetails(vehicle._id)
+                                  }
+                                  className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+                                  title="Delete Entry"
+                                >
+                                  {user?.role !== "user" && (
+                                    <Delete className="w-5 h-5 text-red-600" />
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Details Modal */}
@@ -418,7 +614,7 @@ function VehicleList() {
               </div>
               <div className="col-span-2">
                 <label className="text-sm font-medium text-gray-500">
-                Remarks
+                  Remarks
                 </label>
                 <p className="mt-1 text-lg font-medium">
                   {selectedVehicle.purpose}
@@ -434,6 +630,14 @@ function VehicleList() {
           </div>
         )}
       </Modal>
+
+      {editingVehicle && (
+        <EditVehicleModal
+          vehicle={editingVehicle}
+          onClose={() => setEditingVehicle(null)}
+          onSave={handleSaveEdit}
+        />
+      )}
     </div>
   );
 }

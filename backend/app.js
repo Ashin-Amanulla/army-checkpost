@@ -8,8 +8,8 @@ const multer = require('multer');
 const upload = multer();
 const bodyParser = require('body-parser');
 require('dotenv').config();
-
 // Import routes
+const seedSuperAdmin = require('./seedSuperAdmin');
 const authRoutes = require('./routes/auth.routes');
 const vehicleRoutes = require('./routes/vehicle.routes');
 const checkpostRoutes = require('./routes/checkpost.routes');
@@ -59,5 +59,6 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+// seedSuperAdmin();
 
 module.exports = app;

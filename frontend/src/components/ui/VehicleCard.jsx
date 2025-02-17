@@ -1,9 +1,15 @@
 import { format } from "date-fns";
-import { DirectionsCar, Delete } from "@mui/icons-material";
+import { DirectionsCar, Delete, Edit } from "@mui/icons-material";
 import { StatusBadge } from "./";
 import useStore from "../../store/useStore";
 
-const VehicleCard = ({ vehicle, onView, onDispatchChange, className = "" }) => {
+const VehicleCard = ({
+  vehicle,
+  onDelete,
+  onDispatchChange,
+  onEdit,
+  className = "",
+}) => {
   const { user } = useStore();
   return (
     <div
@@ -107,14 +113,23 @@ const VehicleCard = ({ vehicle, onView, onDispatchChange, className = "" }) => {
             </label>
           </div>
 
-          {user?.role !== "user" && (
-            <button
-              onClick={onView}
-              className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
-              title="View Details"
-            >
-              <Delete className="w-5 h-5 text-red-600" />
-            </button>
+          {user?.role  && (
+            <div className="flex space-x-2">
+              <button
+                onClick={() => onEdit(vehicle)}
+                className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+                title="Edit Entry"
+              >
+                <Edit className="w-5 h-5 text-blue-600" />
+              </button>
+              <button
+                onClick={() => onDelete(vehicle)}
+                className="p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100"
+                title="Delete Entry"
+              >
+               {user?.role !== "user" && <Delete className="w-5 h-5 text-red-600" />}
+              </button>
+            </div>
           )}
         </div>
       </div>
