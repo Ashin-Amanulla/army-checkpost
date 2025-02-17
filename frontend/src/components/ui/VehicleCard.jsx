@@ -60,7 +60,7 @@ const VehicleCard = ({ vehicle, onView, onDispatchChange, className = "" }) => {
               </p>
             </div>
             <div>
-              <p className="text-gray-500">Purpose</p>
+              <p className="text-gray-500">Remarks</p>
               <p className="text-sm line-clamp-2">{vehicle.purpose}</p>
             </div>
             <div>

@@ -50,7 +50,7 @@ const VehicleDetails = ({ vehicle, className = "" }) => {
 
       {vehicle.purpose && (
         <div>
-          <h3 className="text-sm font-medium text-gray-500">Purpose</h3>
+          <h3 className="text-sm font-medium text-gray-500">Remarks</h3>
           <p className="mt-1 text-lg text-gray-900">{vehicle.purpose}</p>
         </div>
       )}
