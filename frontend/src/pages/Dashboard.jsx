@@ -29,6 +29,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import useStore from "../store/useStore";
 
 function Dashboard() {
   const [stats, setStats] = useState({
@@ -48,7 +49,7 @@ function Dashboard() {
   const [timeRange, setTimeRange] = useState("alltime");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
+  const { user } = useStore();
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
   useEffect(() => {
@@ -257,9 +258,10 @@ function Dashboard() {
       </div>
 
       {/* Recent Activity and Last Logins */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Entries */}
-        <Card>
+      {user.role   !== "user" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Entries */}
+          <Card>
           <div className="p-4">
             <h3 className="text-lg font-medium mb-4">Recent Entries</h3>
             <div className="overflow-x-auto">
@@ -342,8 +344,9 @@ function Dashboard() {
               )}
             </div>
           </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
