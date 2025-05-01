@@ -62,9 +62,16 @@ const VehicleCard = ({
             </div>
             <div>
               <p className="text-gray-500">Entered By</p>
-              <p className="font-medium">
-                {vehicle.createdBy?.username || "N/A"}
-              </p>
+              <div>
+                <p className="font-medium">
+                  {vehicle.createdBy?.username || "N/A"}
+                </p>
+                {vehicle.createdBy && vehicle.createdBy.active === false && (
+                  <span className="text-xs text-amber-600">
+                    (Inactive User)
+                  </span>
+                )}
+              </div>
             </div>
             <div>
               <p className="text-gray-500">Remarks</p>

@@ -30,6 +30,14 @@ const userSchema = new mongoose.Schema({
     active: {
         type: Boolean,
         default: true
+    },
+    deactivatedAt: {
+        type: Date,
+        default: null
+    },
+    lastLogin: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true

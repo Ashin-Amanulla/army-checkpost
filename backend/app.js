@@ -26,7 +26,12 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(cors());
+
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -54,6 +59,7 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
 });
+// seedSuperAdmin();
 
 const PORT = process.env.PORT || 5000;
 

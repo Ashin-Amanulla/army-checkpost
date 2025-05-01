@@ -26,5 +26,16 @@ export const settingsAPI = {
         } catch (error) {
             throw error;
         }
+    },
+
+    factoryReset: async () => {
+        try {
+            const response = await axios.post('/settings/factory-reset');
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
     }
-}; 
+};
+
+export default settingsAPI; 

@@ -20,4 +20,9 @@ router.get('/verify-vehicle/:vehicleNumber',
     settingsController.verifyVehicle
 );
 
+router.post('/factory-reset',
+    authorize(['super_admin']),
+    settingsController.factoryReset
+);
+
 module.exports = router; 

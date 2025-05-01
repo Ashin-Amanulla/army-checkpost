@@ -48,12 +48,17 @@ const vehicleController = {
         photoUrl: req.file
           ? req.file.location || `/uploads/${req.file.filename}`
           : null,
+        dispatch: req.body.dispatch === "true" || req.body.dispatch === true,
+        dispatchDate: req.body.dispatch === "true" || req.body.dispatch === true ? new Date() : null,
       });
 
       const populatedEntry = await VehicleEntry.findById(entry._id)
         .populate("vehicleType", "name")
         .populate("checkpost", "name code")
-        .populate("createdBy", "username fullName");
+        .populate({
+          path: "createdBy",
+          select: "username fullName active",
+        });
 
       res.status(201).json({
         success: true,
@@ -103,6 +108,8 @@ const vehicleController = {
         query.$or = [
           { vehicleNumber: new RegExp(search, "i") },
           { driverName: new RegExp(search, "i") },
+          { driverPhone: new RegExp(search, "i") },
+          { purpose: new RegExp(search, "i") }
         ];
       }
 
@@ -121,7 +128,10 @@ const vehicleController = {
         VehicleEntry.find(query)
           .populate("vehicleType", "name")
           .populate("checkpost", "name code location")
-          .populate("createdBy", "username fullName")
+          .populate({
+            path: "createdBy",
+            select: "username fullName active",
+          })
           .sort("-createdAt")
           .skip(skip)
           .limit(limitNumber),
@@ -153,7 +163,10 @@ const vehicleController = {
       const entry = await VehicleEntry.findById(req.params.id)
         .populate("vehicleType", "name")
         .populate("checkpost", "name code location")
-        .populate("createdBy", "username fullName");
+        .populate({
+          path: "createdBy",
+          select: "username fullName active",
+        });
 
       if (!entry) {
         return res.status(404).json({
@@ -182,7 +195,10 @@ const vehicleController = {
       })
         .populate("vehicleType", "name")
         .populate("checkpost", "name code")
-        .populate("createdBy", "username fullName")
+        .populate({
+          path: "createdBy",
+          select: "username fullName active",
+        })
         .sort("-createdAt");
 
       res.json({

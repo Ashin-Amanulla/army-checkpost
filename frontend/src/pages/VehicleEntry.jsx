@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DirectionsCar } from "@mui/icons-material";
+import { DirectionsCar, CheckCircle } from "@mui/icons-material";
 import { vehicleAPI, checkpostAPI } from "../services/api";
 import { PhotoCamera } from "@mui/icons-material";
 import toast from "react-hot-toast";
@@ -16,6 +16,7 @@ function VehicleEntry() {
     purpose: "",
     photo: null,
     checkpost: user.role === "user" ? user.checkpost : "",
+    dispatch: false,
   });
   const [checkposts, setCheckposts] = useState([]);
   const [vehicleTypes, setVehicleTypes] = useState([]);
@@ -92,6 +93,7 @@ function VehicleEntry() {
         purpose: formData.purpose,
         checkpost: formData.checkpost,
         photo: formData.photo,
+        dispatch: formData.dispatch,
       });
 
       // Append all form fields
@@ -105,6 +107,9 @@ function VehicleEntry() {
         formDataToSend.append("driverPhone", formData.driverPhone.trim());
       if (formData.purpose)
         formDataToSend.append("purpose", formData.purpose.trim());
+
+      // Append dispatch status
+      formDataToSend.append("dispatch", formData.dispatch);
 
       // Append checkpost if user is not a regular user
       if (user.role !== "user") {
@@ -141,6 +146,7 @@ function VehicleEntry() {
         purpose: "",
         photo: null,
         checkpost: user.role === "user" ? user.checkpost : "",
+        dispatch: false,
       });
       setPhotoPreview(null);
     } catch (error) {
@@ -240,7 +246,56 @@ function VehicleEntry() {
                           </option>
                         ))}
                     </select>
-                  ):(<div>{user.checkpost.code}</div>)}
+                  ) : (
+                    <div>{user.checkpost.code}</div>
+                  )}
+                </div>
+
+                {/* Dispatch Toggle */}
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Dispatch Status
+                    </label>
+
+                    <div className="relative inline-block w-12 align-middle select-none mt-1">
+                      <input
+                        type="checkbox"
+                        id="toggle"
+                        checked={formData.dispatch}
+                        onChange={() =>
+                          setFormData({
+                            ...formData,
+                            dispatch: !formData.dispatch,
+                          })
+                        }
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="toggle"
+                        className="block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+                      >
+                        <span
+                          className={`block h-6 w-6 rounded-full bg-white border border-gray-300 shadow transform transition-transform duration-200 ease-in ${
+                            formData.dispatch
+                              ? "translate-x-6 bg-green-500"
+                              : "translate-x-0 bg-red-500"
+                          }`}
+                        />
+                      </label>
+                    </div>
+
+                    <span
+                      className={`text-sm font-medium ${
+                        formData.dispatch ? "text-green-600" : "text-red-500"
+                      }`}
+                    >
+                      {formData.dispatch ? "Dispatched" : "Not Dispatched"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Toggle if the vehicle is dispatched immediately upon entry
+                  </p>
                 </div>
               </div>
             </div>
@@ -300,7 +355,7 @@ function VehicleEntry() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                Remarks *
+                  Remarks *
                 </label>
                 <textarea
                   value={formData.purpose}
@@ -384,7 +439,10 @@ function VehicleEntry() {
                     <span>Creating...</span>
                   </span>
                 ) : (
-                  "Create Entry"
+                  <span className="flex items-center space-x-2">
+                    <span>Create Entry</span>
+                    {formData.dispatch && <CheckCircle className="w-4 h-4" />}
+                  </span>
                 )}
               </button>
             </div>

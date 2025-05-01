@@ -1,4 +1,9 @@
 const Settings = require('../models/Settings');
+const Vehicle = require('../models/Vehicle');
+const VehicleType = require('../models/VehicleType');
+const Checkpost = require('../models/Checkpost');
+const AuditLog = require('../models/AuditLog');
+const User = require('../models/User');
 
 const settingsController = {
     updateSettings: async (req, res) => {
@@ -62,12 +67,36 @@ const settingsController = {
             console.log(data);
             res.json({
                 success: true,
-                data:data
+                data: data
             });
         } catch (error) {
             res.status(500).json({
                 success: false,
                 message: error.message
+            });
+        }
+    },
+
+    factoryReset: async (req, res) => {
+        try {
+            // Delete all data except superadmin user
+            await Promise.all([
+                Vehicle.deleteMany({}),
+                VehicleType.deleteMany({}),
+                Checkpost.deleteMany({}),
+                AuditLog.deleteMany({}),
+                User.deleteMany({ role: { $ne: 'super_admin' } })
+            ]);
+
+            res.status(200).json({
+                success: true,
+                message: 'Factory reset completed successfully'
+            });
+        } catch (error) {
+            console.error('Factory reset error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error performing factory reset'
             });
         }
     }

@@ -39,11 +39,28 @@ exports.updateUser = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
     try {
-        const user = await User.findByIdAndDelete(req.params.id);
+        // Instead of deleting the user, set them as inactive
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            {
+                active: false,
+                deactivatedAt: new Date()
+            },
+            { new: true }
+        );
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        res.json({ message: 'User deleted successfully' });
+
+        res.json({
+            message: 'User deactivated successfully',
+            user: {
+                id: user._id,
+                username: user.username,
+                active: user.active
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
