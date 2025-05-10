@@ -5,12 +5,7 @@ const vehicleController = {
   // Create new vehicle entry
   createEntry: async (req, res) => {
     try {
-      console.log("Full Request:", {
-        body: req.body,
-        file: req.file,
-        user: req.user,
-        headers: req.headers["content-type"],
-      });
+ 
 
       // Validate required fields
       if (

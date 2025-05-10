@@ -26,8 +26,14 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(morgan('dev'));
-app.use(cors());
+app.use(cors({
+    origin: ['https://chtconnect.in', 'http://localhost:3000', 'http://localhost:5173'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  }));
+
+  app.use(morgan('dev'));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
