@@ -33,7 +33,9 @@ const vehicleController = {
       if (checkVehicleNumber) {
         return res.status(400).json({
           success: false,
-          message: `Vehicle already entered today at ${checkVehicleNumber.checkpost.name} at ${checkVehicleNumber.createdAt.toLocaleString()}`,
+          message: `Vehicle already entered today at ${
+            checkVehicleNumber.checkpost.name
+          } at ${checkVehicleNumber.createdAt.toLocaleString()}`,
         });
       }
 
@@ -49,7 +51,10 @@ const vehicleController = {
           ? req.file.location || `/uploads/${req.file.filename}`
           : null,
         dispatch: req.body.dispatch === "true" || req.body.dispatch === true,
-        dispatchDate: req.body.dispatch === "true" || req.body.dispatch === true ? new Date() : null,
+        dispatchDate:
+          req.body.dispatch === "true" || req.body.dispatch === true
+            ? new Date()
+            : null,
       });
 
       const populatedEntry = await VehicleEntry.findById(entry._id)
@@ -90,7 +95,6 @@ const vehicleController = {
       console.log(req.query);
       let query = {};
 
-
       // Date filter
       if (startDate && endDate) {
         query.createdAt = {
@@ -109,7 +113,7 @@ const vehicleController = {
           { vehicleNumber: new RegExp(search, "i") },
           { driverName: new RegExp(search, "i") },
           { driverPhone: new RegExp(search, "i") },
-          { purpose: new RegExp(search, "i") }
+          { purpose: new RegExp(search, "i") },
         ];
       }
 
@@ -120,7 +124,6 @@ const vehicleController = {
 
       const pageNumber = Math.max(Number(page) || 1, 1);
       const limitNumber = Math.max(Number(limit) || 10, 1);
-
 
       const skip = (pageNumber - 1) * limitNumber;
 
@@ -137,7 +140,6 @@ const vehicleController = {
           .limit(limitNumber),
         VehicleEntry.countDocuments(query),
       ]);
-
 
       res.json({
         success: true,
@@ -333,14 +335,14 @@ const vehicleController = {
     try {
       const { id } = req.params;
       const { vehicleNumber, driverName, driverPhone, purpose } = req.body;
-      console.log('dasdas', req.body);
+      console.log("dasdas", req.body);
 
       // Find vehicle and check if it exists
       const vehicle = await VehicleEntry.findById(id);
       if (!vehicle) {
         return res.status(404).json({
           success: false,
-          message: 'Vehicle entry not found'
+          message: "Vehicle entry not found",
         });
       }
       // Update only allowed fields
@@ -350,28 +352,26 @@ const vehicleController = {
           vehicleNumber,
           driverName,
           driverPhone,
-          purpose
+          purpose,
         },
         { new: true }
       )
-        .populate('vehicleType')
-        .populate('checkpost')
-        .populate('createdBy', 'username');
-
-
+        .populate("vehicleType")
+        .populate("checkpost")
+        .populate("createdBy", "username");
 
       res.json({
         success: true,
-        data: updatedVehicle
+        data: updatedVehicle,
       });
     } catch (error) {
-      console.error('Error updating vehicle:', error);
+      console.error("Error updating vehicle:", error);
       res.status(500).json({
         success: false,
-        message: error.message
+        message: error.message,
       });
     }
-  }
+  },
 };
 
 module.exports = vehicleController;

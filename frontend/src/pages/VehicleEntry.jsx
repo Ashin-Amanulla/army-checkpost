@@ -151,10 +151,23 @@ function VehicleEntry() {
       setPhotoPreview(null);
     } catch (error) {
       console.error("Error creating entry:", error);
+
+      // More detailed error handling
       if (error.response) {
-        toast.error(error.response.data);
+        // The server responded with a status code outside the 2xx range
+        if (error.response.data && typeof error.response.data === "string") {
+          toast.error(error.response.data);
+        } else if (error.response.data && error.response.data.message) {
+          toast.error(error.response.data.message);
+        } else {
+          toast.error(`Server error: ${error.response.status}`);
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        toast.error("No response from server. Check your connection.");
       } else {
-        toast.error("Failed to create entry");
+        // Something else caused the error
+        toast.error("Failed to create entry: " + error.message);
       }
     } finally {
       setLoading(false);
