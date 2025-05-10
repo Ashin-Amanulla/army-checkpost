@@ -13,11 +13,11 @@ const seedSuperAdmin = async () => {
         console.log('Connected to MongoDB');
 
         // Check if super admin exists
-        const adminExists = await User.deleteOne({ username: 'super_admin' });
-        // if (adminExists) {
-        //     console.log('Super admin already exists');
-        //     process.exit(0);
-        // }
+        const adminExists = await User.findOne({ username: 'xyvin_super_admin' });
+        if (adminExists) {
+            console.log('Super admin already exists');
+            process.exit(0);
+        }
 
         // Create super admin
         const superAdmin = await User.create({
