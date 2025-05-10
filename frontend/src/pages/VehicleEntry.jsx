@@ -151,7 +151,11 @@ function VehicleEntry() {
       setPhotoPreview(null);
     } catch (error) {
       console.error("Error creating entry:", error);
-      toast.error(error.response?.data?.message || "Failed to create entry");
+      if (error.response) {
+        toast.error(error.response.data);
+      } else {
+        toast.error("Failed to create entry");
+      }
     } finally {
       setLoading(false);
     }
