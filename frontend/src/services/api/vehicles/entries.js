@@ -3,7 +3,7 @@ import axios from "../config/axios";
 export const createEntry = async (data) => {
   try {
     // Special handling for FormData
-    const config = {};
+    const config = { headers: { "Content-Type": "multipart/form-data" } };
 
     // Let browser set the Content-Type for FormData
     // The interceptor will handle this
